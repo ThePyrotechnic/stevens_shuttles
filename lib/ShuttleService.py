@@ -1,7 +1,6 @@
 from typing import Dict, List
 
 import requests
-import threading
 
 
 class BadResponse(Exception):
@@ -12,6 +11,28 @@ class BadResponse(Exception):
 class ObjectNotFound(Exception):
     """Could not find the desired object"""
     pass
+
+
+class _GenericDictObj:
+    def __init__(self, data: Dict):
+        self.__dict__ = data
+
+
+class Shuttle(_GenericDictObj):
+    def __init__(self, data: Dict):
+        super().__init__(data)
+        self.next_stop = ShuttleService(self.agency_id).get_stops()
+    pass
+
+
+class Stop(_GenericDictObj):
+    pass
+
+
+class Route(_GenericDictObj):
+    @property
+    def stops(self):
+        return ShuttleService(self.agency_id).get_stop_ids_for_route(self.id)
 
 
 class ShuttleService:
@@ -25,40 +46,57 @@ class ShuttleService:
         self.session = requests.session()
         self.agency_id = agency_id
 
-    def get_routes(self) -> List[Dict]:
+    def get_routes(self, key_filter: Dict = None) -> List[Route]:
         """
         Get all routes for the current shuttle agency
         :return: A list of all routes
         """
-        return self._generic_request('routes')['routes']
+        return [Route(r) for r in self._generic_request('routes')['routes']]
 
-    def get_stops(self) -> List[Dict]:
+    def get_stops(self, key_filter: Dict = None) -> List[Stop]:
         """
         Get details on all stops for the current shuttle agency
         :return: A list of all stops
         """
-        return self._generic_request('stops')['stops']
+        return [Stop(s) for s in self._generic_request('stops')['stops']]
 
-    def get_vehicle_statuses(self) -> List[Dict]:
+    def get_vehicle_statuses(self, key_filter: Dict = None) -> List[Shuttle]:
         """
         Get details on all currently active vehicles
         :return: A list of all currently active vehicles
         """
-        return self._generic_request('vehicle_statuses')['vehicles']
+        raw_resp = self._generic_request('vehicle_statuses')['vehicles']
+        return [Shuttle(v) for v in raw_resp]
 
-    def get_stop_ids_for_route(self, route_id: int) -> List[Dict]:
+    def get_stop_ids(self, key_filter: Dict = None) -> List[Dict]:
         """
-        Get stop IDs for the given route ID
-        :param route_id: The route ID
+        Get stop IDs for the current shuttle agency
+        :param key_filter: A dictionary to filter the results by. See _filter_results for details
         :return: A list of stop IDs
         :raises ObjectNotFound: if the route ID could not be found
         """
-        for route in self._generic_request('stops', params={'include_routes': True})['routes']:
-            if route['id'] == route_id:
-                return route['stops']
-        raise ObjectNotFound(f'Route ID {route_id} not found')
+        return ShuttleService._filter_results(self._generic_request('stops', params={'include_routes': True})['routes'], key_filter)
 
-    def _generic_request(self, endpoint: str, params: Dict = None, method: str = 'GET', timeout: int = 10, **kwargs) -> Dict:
+    @classmethod
+    def _filter_results(cls, results: List[Dict], key_filter: Dict) -> List[Dict]:
+        """
+        Filter the results list of dicts by the key-value pairs in the key_filter dict
+        :param results: The list of dicts to filter
+        :param key_filter: The dict to filter with
+        :return: A list where each item is a dict whose key-value pairs are at least equal to the key-value pairs
+        in the key_filter dict.
+        """
+        if key_filter is None or len(key_filter) == 0:
+            return results
+
+        filtered_results = []
+        for result in results:
+            if all(result.get(key) == value for key, value in key_filter.items()):
+                filtered_results.append(result)
+        return filtered_results
+
+    def _generic_request(self, endpoint: str, params: Dict = None, method: str = 'GET',
+                         timeout: int = 10, **kwargs) -> Dict:
         """
         Send a request to the transloc api
         :param endpoint: The endpoint to query
@@ -87,11 +125,3 @@ class ShuttleService:
             return res.json()
         except ValueError:
             raise ValueError(f'{method} request for {endpoint}{method} was not valid JSON')
-
-
-class Shuttle:
-    def __init__(self, update_rate: int):
-        """
-        Representation of a TransLoc shuttle which keeps itself updated
-        """
-        pass
