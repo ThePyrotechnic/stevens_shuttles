@@ -1,6 +1,7 @@
 from typing import Dict, List
 
 import requests
+import threading
 
 
 class BadResponse(Exception):
@@ -37,6 +38,13 @@ class ShuttleService:
         :return: A list of all stops
         """
         return self._generic_request('stops')['stops']
+
+    def get_vehicle_statuses(self) -> List[Dict]:
+        """
+        Get details on all currently active vehicles
+        :return: A list of all currently active vehicles
+        """
+        return self._generic_request('vehicle_statuses')['vehicles']
 
     def get_stop_ids_for_route(self, route_id: int) -> List[Dict]:
         """
@@ -79,3 +87,11 @@ class ShuttleService:
             return res.json()
         except ValueError:
             raise ValueError(f'{method} request for {endpoint}{method} was not valid JSON')
+
+
+class Shuttle:
+    def __init__(self, update_rate: int):
+        """
+        Representation of a TransLoc shuttle which keeps itself updated
+        """
+        pass
