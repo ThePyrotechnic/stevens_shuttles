@@ -5,6 +5,10 @@
       <option name="ignoredIdentifiers">
         <list>
           <option value="ShuttleService.Route.*" />
+          <option value="lib.ShuttleService.Route.id" />
+          <option value="lib.ShuttleService.Route.*" />
+          <option value="lib.ShuttleService.Shuttle.*" />
+          <option value="ShuttleService.Shuttle.*" />
         </list>
       </option>
     </inspection_tool>

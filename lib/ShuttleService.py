@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Dict, List
 
 import requests
@@ -18,24 +19,73 @@ class _GenericDictObj:
         self.__dict__ = data
 
 
-class Shuttle(_GenericDictObj):
-    def __init__(self, data: Dict):
-        super().__init__(data)
-        self.next_stop = ShuttleService(self.agency_id).get_stops()
-    pass
-
-
 class Stop(_GenericDictObj):
     pass
 
 
 class Route(_GenericDictObj):
+    pass
+
+
+class Shuttle(_GenericDictObj):
+    """
+    A single shuttle
+    :note: Use a ShuttleService to work with many shuttles in real-time
+    """
+    def __init__(self, data: Dict, detailed: bool = False):
+        """
+        Creates a shuttle object from a JSON response
+        :param data: the data to use
+        :param detailed: whether to convert self.next_stop to a Stop object, and retrieve self.stop_ids and self.stops.
+        Setting detailed to True may pull newer data than is indicated by self.timestamp
+        """
+        super().__init__(data)
+        self._ss = None
+        if detailed:
+            self._ss = ShuttleService(self.agency_id)
+            try:
+                self.next_stop = self._ss.get_stop(self.next_stop)
+            except ObjectNotFound:
+                self.next_stop = None
+            self.stop_ids = self._ss.get_stop_ids_for_route(self.route_id)
+            self.stops = self._ss.get_stops(key_filter={'id': self.stop_ids})
+
+            self.timestamp = datetime.utcfromtimestamp(float(self.timestamp)/1000)
+
+    def update(self, detailed: bool = False):
+        """
+        Re-initialize this shuttle with updated information
+        :param detailed: whether to convert self.next_stop to a Stop object, and retrieve self.stop_ids and self.stops.
+        Setting detailed to True may pull newer data than is indicated by self.timestamp
+        :return: None
+        """
+        if self._ss is None:
+            self._ss = ShuttleService(self.agency_id)
+        self.__init__(self._ss.get_shuttle_status(self.id, raw=True), detailed=detailed)
+
+
+class ShuttleManager:
+    """
+    Used to keep track of a TransLoc shuttle service in real-time
+    """
+    def __init__(self, agency_id: int):
+        self._ss = ShuttleService(agency_id)
+
     @property
-    def stops(self):
-        return ShuttleService(self.agency_id).get_stop_ids_for_route(self.id)
+    def shuttles(self) -> List[Shuttle]:
+        """
+        Get the currently active shuttles for the current service.
+        Do not create references to shuttles unless you know what you are doing! They do not update themselves.
+        :return: A list of the shuttles currently active for the current service
+        """
+        return self._ss.get_shuttle_statuses()
 
 
 class ShuttleService:
+    """
+    Represents a TransLoc shuttle service.
+    Use **kwargs to pass arguments directly to the web request
+    """
     _BASE_URL = 'https://feeds.transloc.com/3/'
 
     def __init__(self, agency_id: int):
@@ -46,36 +96,96 @@ class ShuttleService:
         self.session = requests.session()
         self.agency_id = agency_id
 
-    def get_routes(self, key_filter: Dict = None) -> List[Route]:
+    def get_route(self, route_id: int, **kwargs):
+        """
+        Get a single route
+        :param route_id: the ID of the route
+        :param kwargs: additional kwargs are passed to the web request
+        :return: The desired route
+        :raises ObjectNotFound: if the route could not be found
+        """
+        try:
+            return self.get_routes(key_filter={'id': route_id}, **kwargs)[0]
+        except IndexError:
+            raise ObjectNotFound(f'Route ID "{route_id} not found')
+
+    def get_routes(self, key_filter: Dict = None, **kwargs) -> List[Route]:
         """
         Get all routes for the current shuttle agency
+        :param key_filter: A dictionary to filter the results by. See _filter_results for details
+        :param kwargs: additional kwargs are passed to the web request
         :return: A list of all routes
         """
-        return [Route(r) for r in self._generic_request('routes')['routes']]
+        return [Route(r) for r in self._generic_request('routes', desired_key='routes', key_filter=key_filter, **kwargs)]
 
-    def get_stops(self, key_filter: Dict = None) -> List[Stop]:
+    def get_stop(self, stop_id: int, **kwargs):
+        """
+        Get a single stop
+        :param stop_id: the ID of the stop
+        :param kwargs: additional kwargs are passed to the web request
+        :return: The desired stop
+        :raises ObjectNotFound: if the stop could not be found
+        """
+        try:
+            return self.get_stops(key_filter={'id': stop_id}, **kwargs)[0]
+        except IndexError:
+            raise ObjectNotFound(f'Stop ID "{stop_id} not found')
+
+    def get_stops(self, key_filter: Dict = None, **kwargs) -> List[Stop]:
         """
         Get details on all stops for the current shuttle agency
+        :param key_filter: A dictionary to filter the results by. See _filter_results for details
+        :param kwargs: additional kwargs are passed to the web request
         :return: A list of all stops
         """
-        return [Stop(s) for s in self._generic_request('stops')['stops']]
+        return [Stop(s) for s in self._generic_request('stops', desired_key='stops', key_filter=key_filter, **kwargs)]
 
-    def get_vehicle_statuses(self, key_filter: Dict = None) -> List[Shuttle]:
+    def get_shuttle_status(self, shuttle_id: int, raw: bool = False, **kwargs) -> [Shuttle, Dict]:
         """
-        Get details on all currently active vehicles
-        :return: A list of all currently active vehicles
+        Get the status of a single shuttle
+        :param shuttle_id: the ID of the shuttle
+        :param raw: If true, do not convert the JSON into an object
+        :param kwargs: additional kwargs are passed to the web request
+        :return: the status of the shuttle
+        :raises ObjectNotFound: if the shuttle status could not be found
         """
-        raw_resp = self._generic_request('vehicle_statuses')['vehicles']
-        return [Shuttle(v) for v in raw_resp]
+        try:
+            return self.get_shuttle_statuses(key_filter={'id': shuttle_id}, raw=raw, **kwargs)[0]
+        except IndexError:
+            raise ObjectNotFound(f'Shuttle ID "{shuttle_id}" status not found')
 
-    def get_stop_ids(self, key_filter: Dict = None) -> List[Dict]:
+    def get_shuttle_statuses(self, key_filter: Dict = None, raw: bool = False, **kwargs) -> [List[Shuttle], List[Dict]]:
         """
-        Get stop IDs for the current shuttle agency
+        Get details on all currently active shuttles
+        :param raw: If true, do not convert the JSON into an object
         :param key_filter: A dictionary to filter the results by. See _filter_results for details
-        :return: A list of stop IDs
-        :raises ObjectNotFound: if the route ID could not be found
+        :param kwargs: additional kwargs are passed to the web request
+        :return: A list of all currently active shuttles
         """
-        return ShuttleService._filter_results(self._generic_request('stops', params={'include_routes': True})['routes'], key_filter)
+        if raw:
+            return self._generic_request('vehicle_statuses', desired_key='vehicles', key_filter=key_filter, **kwargs)
+        return [Shuttle(v) for v in self._generic_request('vehicle_statuses', desired_key='vehicles', key_filter=key_filter, **kwargs)]
+
+    def get_stop_ids_for_route(self, route_id: int, **kwargs) -> List[int]:
+        """
+        Get stop IDs for a single route
+        :param route_id: The route ID to get stops for
+        :param kwargs: additional kwargs are passed to the web request
+        :return: A list of route IDs
+        """
+        try:
+            return self.get_stop_ids_for_routes(key_filter={'id': route_id}, **kwargs)[0]['stops']
+        except IndexError:
+            raise ObjectNotFound(f'Route ID "{route_id}" not found')
+
+    def get_stop_ids_for_routes(self, key_filter: Dict = None, **kwargs) -> List[Dict]:
+        """
+        Get stop IDs by route for the current shuttle agency
+        :param key_filter: A dictionary to filter the results by. See _filter_results for details
+        :param kwargs: additional kwargs are passed to the web request
+        :return: A list of stop IDs
+        """
+        return self._generic_request('stops', params={'include_routes': True}, desired_key='routes', key_filter=key_filter, **kwargs)
 
     @classmethod
     def _filter_results(cls, results: List[Dict], key_filter: Dict) -> List[Dict]:
@@ -83,27 +193,35 @@ class ShuttleService:
         Filter the results list of dicts by the key-value pairs in the key_filter dict
         :param results: The list of dicts to filter
         :param key_filter: The dict to filter with
+        :param kwargs: additional kwargs are passed to the web request
         :return: A list where each item is a dict whose key-value pairs are at least equal to the key-value pairs
-        in the key_filter dict.
+        in the key_filter dict. If a value in key_filter is a list, at least one of the values must match.
         """
         if key_filter is None or len(key_filter) == 0:
             return results
 
         filtered_results = []
         for result in results:
-            if all(result.get(key) == value for key, value in key_filter.items()):
+            if all(result.get(key) == value or (type(value) == list and result.get(key) in value) for key, value in key_filter.items()):
+            # good = True
+            # for key, value in key_filter.items():
+            #     if not(result.get(key) == value or (type(value) == list and result.get(key) in value)):
+            #         good = False
+            # if good:
                 filtered_results.append(result)
         return filtered_results
 
     def _generic_request(self, endpoint: str, params: Dict = None, method: str = 'GET',
-                         timeout: int = 10, **kwargs) -> Dict:
+                         timeout: int = 10, desired_key: str = None, key_filter: Dict = None, **kwargs) -> [Dict, List[Dict]]:
         """
         Send a request to the transloc api
         :param endpoint: The endpoint to query
         :param params: The params to send
         :param method: The method to form the request as
         :param timeout: The request timeout
-        :param kwargs: kwargs passed to the request
+        :param desired_key: An optional key to return from the JSON response, instead of the entire JSON object
+        :param key_filter: A dictionary to filter the results by. See _filter_results for details
+        :param kwargs: kwargs passed to the web request
         :return: The JSON response
         :raises TimeoutError: If the request times out
         :raises BadResponse: If the response status code is greater than 200
@@ -122,6 +240,16 @@ class ShuttleService:
             raise BadResponse(res.status_code)
 
         try:
-            return res.json()
+            if desired_key is not None:
+                try:
+                    response = res.json()[desired_key]
+                except KeyError:
+                    raise KeyError(f'Desired key "{desired_key}" was not found')
+            else:
+                response = res.json()
+            if key_filter is not None:
+                return ShuttleService._filter_results(response, key_filter)
+            return response
+
         except ValueError:
             raise ValueError(f'{method} request for {endpoint}{method} was not valid JSON')
