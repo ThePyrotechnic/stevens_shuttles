@@ -72,13 +72,16 @@ class ShuttleManager:
         self._ss = ShuttleService(agency_id)
 
     @property
-    def shuttles(self) -> List[Shuttle]:
+    def shuttles(self, detailed: bool = False, key_filter: Dict = None) -> List[Shuttle]:
         """
         Get the currently active shuttles for the current service.
         Do not create references to shuttles unless you know what you are doing! They do not update themselves.
+        :param detailed: whether to convert self.next_stop to a Stop object, and retrieve self.stop_ids and self.stops.
+        Setting detailed to True may pull newer data than is indicated by self.timestamp
+        :param key_filter: A dictionary to filter the shuttles by. See _filter_results for details
         :return: A list of the shuttles currently active for the current service
         """
-        return self._ss.get_shuttle_statuses()
+        return self._ss.get_shuttle_statuses(detailed=detailed, key_filter=key_filter)
 
 
 class ShuttleService:
@@ -140,23 +143,27 @@ class ShuttleService:
         """
         return [Stop(s) for s in self._generic_request('stops', desired_key='stops', key_filter=key_filter, **kwargs)]
 
-    def get_shuttle_status(self, shuttle_id: int, raw: bool = False, **kwargs) -> [Shuttle, Dict]:
+    def get_shuttle_status(self, shuttle_id: int, detailed: bool = False, raw: bool = False, **kwargs) -> [Shuttle, Dict]:
         """
         Get the status of a single shuttle
         :param shuttle_id: the ID of the shuttle
+        :param detailed: whether to convert self.next_stop to a Stop object, and retrieve self.stop_ids and self.stops.
+        Setting detailed to True may pull newer data than is indicated by self.timestamp
         :param raw: If true, do not convert the JSON into an object
         :param kwargs: additional kwargs are passed to the web request
         :return: the status of the shuttle
         :raises ObjectNotFound: if the shuttle status could not be found
         """
         try:
-            return self.get_shuttle_statuses(key_filter={'id': shuttle_id}, raw=raw, **kwargs)[0]
+            return self.get_shuttle_statuses(key_filter={'id': shuttle_id}, detailed=detailed, raw=raw, **kwargs)[0]
         except IndexError:
             raise ObjectNotFound(f'Shuttle ID "{shuttle_id}" status not found')
 
-    def get_shuttle_statuses(self, key_filter: Dict = None, raw: bool = False, **kwargs) -> [List[Shuttle], List[Dict]]:
+    def get_shuttle_statuses(self, key_filter: Dict = None, detailed: bool = False, raw: bool = False, **kwargs) -> [List[Shuttle], List[Dict]]:
         """
         Get details on all currently active shuttles
+        :param detailed: whether to convert self.next_stop to a Stop object, and retrieve self.stop_ids and self.stops.
+        Setting detailed to True may pull newer data than is indicated by self.timestamp
         :param raw: If true, do not convert the JSON into an object
         :param key_filter: A dictionary to filter the results by. See _filter_results for details
         :param kwargs: additional kwargs are passed to the web request
@@ -164,7 +171,7 @@ class ShuttleService:
         """
         if raw:
             return self._generic_request('vehicle_statuses', desired_key='vehicles', key_filter=key_filter, **kwargs)
-        return [Shuttle(v) for v in self._generic_request('vehicle_statuses', desired_key='vehicles', key_filter=key_filter, **kwargs)]
+        return [Shuttle(v, detailed=detailed) for v in self._generic_request('vehicle_statuses', desired_key='vehicles', key_filter=key_filter, **kwargs)]
 
     def get_stop_ids_for_route(self, route_id: int, **kwargs) -> List[int]:
         """
@@ -203,11 +210,6 @@ class ShuttleService:
         filtered_results = []
         for result in results:
             if all(result.get(key) == value or (type(value) == list and result.get(key) in value) for key, value in key_filter.items()):
-            # good = True
-            # for key, value in key_filter.items():
-            #     if not(result.get(key) == value or (type(value) == list and result.get(key) in value)):
-            #         good = False
-            # if good:
                 filtered_results.append(result)
         return filtered_results
 
