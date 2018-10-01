@@ -20,8 +20,6 @@ class _GenericDictObj:
 
 
 class Stop(_GenericDictObj):
-    def as_dict(self):
-        return {'id': self.id, 'position': self.position}
     pass
 
 
