@@ -50,7 +50,7 @@ class Shuttle(_GenericDictObj):
             self.stop_ids = self._ss.get_stop_ids_for_route(self.route_id)
             self.stops = self._ss.get_stops(key_filter={'id': self.stop_ids})
 
-            self.timestamp = datetime.utcfromtimestamp(float(self.timestamp)/1000)
+        self.timestamp = datetime.utcfromtimestamp(float(self.timestamp)/1000)
 
     def update(self, detailed: bool = False):
         """
