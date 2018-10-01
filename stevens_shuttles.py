@@ -22,13 +22,27 @@ def process_shuttle(shuttle: ShuttleService.Shuttle):
     return f'Processed shuttle {shuttle.id}|{shuttle.timestamp}'
 
 
+def get_latest_route_data():
+    ss = ShuttleService.ShuttleService(307)
+    stops = ss.get_stops()
+    stop_dict = {}
+    for stop in stops:
+        stop_dict[stop.id] = stop
+
+    stops_by_route = ss.get_stop_ids_for_routes()
+    latest_route_data = {}
+    for route in ss.get_routes():
+        latest_route_data[route.id] = [stop_dict[s].__dict__ for s in stops_by_route[route.id]]
+    return latest_route_data
+
+
 def main():
     db: psycopg2 = psycopg2.connect(**parse_config())
 
+    latest_route_data = get_latest_route_data()
     sm = ShuttleService.ShuttleManager(307)
-
     # TODO Create in-memory shared schedule for process_shuttle to work with
-    # TODO Create in-memory shared map of current route-stop relationships, update periodically
+    # TODO Share latest_route_data with workers, and update periodically
     with Pool(5) as p:
         print(p.map(process_shuttle, sm.shuttles))
 

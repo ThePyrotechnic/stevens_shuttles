@@ -20,6 +20,8 @@ class _GenericDictObj:
 
 
 class Stop(_GenericDictObj):
+    def as_dict(self):
+        return {'id': self.id, 'position': self.position}
     pass
 
 
@@ -185,14 +187,20 @@ class ShuttleService:
         except IndexError:
             raise ObjectNotFound(f'Route ID "{route_id}" not found')
 
-    def get_stop_ids_for_routes(self, key_filter: Dict = None, **kwargs) -> List[Dict]:
+    def get_stop_ids_for_routes(self, key_filter: Dict = None, **kwargs) -> Dict[int, List]:
         """
         Get stop IDs by route for the current shuttle agency
         :param key_filter: A dictionary to filter the results by. See _filter_results for details
         :param kwargs: additional kwargs are passed to the web request
-        :return: A list of stop IDs
+        :return: A dict mapping route IDs to stops
         """
-        return self._generic_request('stops', params={'include_routes': True}, desired_key='routes', key_filter=key_filter, **kwargs)
+        data = self._generic_request('stops', params={'include_routes': True}, desired_key='routes', key_filter=key_filter, **kwargs)
+
+        ret = {}
+        for d in data:
+            ret[d['id']] = d['stops']
+
+        return ret
 
     @classmethod
     def _filter_results(cls, results: List[Dict], key_filter: Dict) -> List[Dict]:
