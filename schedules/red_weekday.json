@@ -1,105 +1,44 @@
 [
-  [
-    {
-      "start_time": "07:30AM",
-      "end_time": "10:40AM",
-      "pattern": [10, 8],
-      "spacing": [6, 1, 0]
-    },
-    {
-      "start_time": "07:36AM",
-      "pattern": [10, 8]
-    },{
-      "start_time": "07:37AM",
-      "pattern": [10, 8]
-    },{
-      "start_time": "07:37AM",
-      "pattern": [10, 8]
-    }
-  ],
-  [
-    {
-      "start_time": "10:58AM",
-      "end_time": "11:42PM",
-      "pattern": [8, 10]
-    },
-    {
-      "start_time": "11:04AM",
-      "pattern": [8, 10]
-    },{
-      "start_time": "11:05AM",
-      "pattern": [8, 10]
-    },{
-      "start_time": "11:05AM",
-      "pattern": [8, 10]
-    }
-  ],
-  [
-    {
-      "start_time": "12:00PM",
-      "end_time": "04:48PM",
-      "pattern": [18]
-    },
-    {
-      "start_time": "12:06PM",
-      "pattern": [18]
-    },{
-      "start_time": "12:07PM",
-      "pattern": [18]
-    },{
-      "start_time": "12:07PM",
-      "pattern": [18]
-    }
-  ],
-  [
-    {
-      "start_time": "04:48PM",
-      "end_time": "07:24PM",
-      "pattern": [12, 6]
-    },
-    {
-      "start_time": "04:54PM",
-      "pattern": [12, 6]
-    },{
-      "start_time": "04:55PM",
-      "pattern": [12, 6]
-    },{
-      "start_time": "04:55PM",
-      "pattern": [12, 6]
-    }
-  ],
-  [
-    {
-      "start_time": "07:42PM",
-      "end_time": "09:00PM",
-      "pattern": [6, 12]
-    },
-    {
-      "start_time": "07:48PM",
-      "pattern": [6, 12]
-    },{
-      "start_time": "07:49PM",
-      "pattern": [6, 12]
-    },{
-      "start_time": "07:49PM",
-      "pattern": [6, 12]
-    }
-  ],
-  [
-    {
-      "start_time": "09:18PM",
-      "end_time": "10:12PM",
-      "pattern": [18]
-    },
-    {
-      "start_time": "09:24PM",
-      "pattern": [18]
-    },{
-      "start_time": "09:25PM",
-      "pattern": [18]
-    },{
-      "start_time": "09:25PM",
-      "pattern": [18]
-    }
-  ]
+  {
+    "start_time": "07:30AM",
+    "end_time": "10:40AM",
+    "pattern": [10, 8],
+    "spacing": [6, 7, 7]
+  },
+  {
+    "start_time": "10:58AM",
+    "end_time": "11:42AM",
+    "pattern": [8, 10],
+    "spacing": [6, 7, 7]
+  },
+  {
+    "start_time": "12:00PM",
+    "end_time": "04:48PM",
+    "pattern": [18],
+    "spacing": [6, 7, 7]
+  },
+  {
+    "start_time": "05:00PM",
+    "end_time": "07:06PM",
+    "pattern": [6, 12],
+    "spacing": [6, 7, 7]
+  },
+  {
+    "start_time": "07:24PM",
+    "end_time": "07:42PM",
+    "pattern": [18],
+    "spacing": [6, 7, 7]
+  },
+  {
+    "start_time": "07:48PM",
+    "end_time": "09:00PM",
+    "pattern": [12, 6],
+    "spacing": [6, 7, 7]
+  },
+  {
+    "start_time": "09:18PM",
+    "end_time": "10:12PM",
+    "pattern": [18],
+    "spacing": [6, 7, 7]
+  }
 ]
