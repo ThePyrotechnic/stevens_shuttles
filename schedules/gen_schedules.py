@@ -5,7 +5,7 @@ import os
 
 
 def main():
-    for filename in ['green_weekday.json']:
+    for filename in ['red_sunday.json']:
         with open(os.path.join(os.getcwd(), filename)) as cfg_file:
             cfg = json.load(cfg_file)
         print('-' * len(filename))

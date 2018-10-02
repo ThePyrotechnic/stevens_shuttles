@@ -3,7 +3,8 @@
     "start_time": "07:37AM",
     "end_time": "10:17AM",
     "pattern": [20],
-    "spacing": [13, 15]
+    "spacing": [13, 15],
+    "comment": "TODO REMEMBER TO REMOVE THE SPECIAL CASES FOR THE BLUE LINE"
   },
   {
     "start_time": "11:17AM",
