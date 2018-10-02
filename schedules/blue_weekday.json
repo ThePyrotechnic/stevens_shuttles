@@ -1,14 +1,22 @@
 {
   "info": {
-    "headers": [1, 2, 3],
-    "comment": "TODO REMEMBER TO REMOVE THE SPECIAL CASES FOR THE BLUE LINE"
+    "route_id": 4004706,
+    "valid_duration": ["07:37AM", "10:32PM"],
+    "headers": [4132090, 4208462, 4211460],
+    "comment": "REMEMBER TO HANDLE MANUAL ENTRIES FOR THE BLUE LINE"
   },
   "data": [
+    {
+      "manual": ["None", "07:30AM", "07:32AM"]
+    },
     {
       "start_time": "07:37AM",
       "end_time": "10:17AM",
       "pattern": [20],
-      "spacing": [13, 15],
+      "spacing": [13, 15]
+    },
+    {
+      "manual": ["None", "11:10AM", "11:12AM"]
     },
     {
       "start_time": "11:17AM",

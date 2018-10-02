@@ -1,32 +1,39 @@
-[
-  {
-    "start_time": "12:00PM",
-    "end_time": "02:12PM",
-    "pattern": [22],
-    "spacing": [5, 6, 6, 7, 9, 14]
+{
+  "info": {
+    "route_id": 4011456,
+    "valid_duration": ["12:00PM", "02:04AM"],
+    "headers": [4132090, 4208464, 4111538, 4211462, 4151398, 4211464, 4211466],
   },
-  {
-    "start_time": "03:18PM",
-    "end_time": "05:52PM",
-    "pattern": [22],
-    "spacing": [5, 6, 6, 7, 9, 14]
-  },
-  {
-    "start_time": "06:36PM",
-    "end_time": "08:04PM",
-    "pattern": [22],
-    "spacing": [5, 6, 6, 7, 9, 14]
-  },
-  {
-    "start_time": "08:24PM",
-    "end_time": "09:04PM",
-    "pattern": [20],
-    "spacing": [5, 6, 6, 7, 9, 14]
-  },
-  {
-    "start_time": "10:04PM",
-    "end_time": "02:04AM",
-    "pattern": [20],
-    "spacing": [5, 6, 6, 7, 9, 14]
-  }
-]
+  "data": [
+    {
+      "start_time": "12:00PM",
+      "end_time": "02:12PM",
+      "pattern": [22],
+      "spacing": [5, 6, 6, 7, 9, 14]
+    },
+    {
+      "start_time": "03:18PM",
+      "end_time": "05:52PM",
+      "pattern": [22],
+      "spacing": [5, 6, 6, 7, 9, 14]
+    },
+    {
+      "start_time": "06:36PM",
+      "end_time": "08:04PM",
+      "pattern": [22],
+      "spacing": [5, 6, 6, 7, 9, 14]
+    },
+    {
+      "start_time": "08:24PM",
+      "end_time": "09:04PM",
+      "pattern": [20],
+      "spacing": [5, 6, 6, 7, 9, 14]
+    },
+    {
+      "start_time": "10:04PM",
+      "end_time": "02:04AM",
+      "pattern": [20],
+      "spacing": [5, 6, 6, 7, 9, 14]
+    }
+  ]
+}

@@ -1,26 +1,33 @@
-[
-  {
-    "start_time": "07:40AM",
-    "end_time": "11:00AM",
-    "pattern": [20],
-    "spacing": [7, 8]
+{
+  "info": {
+    "route_id": 4011458,
+    "valid_duration": ["07:40AM", "10:10PM"],
+    "headers": [4132090, 4220778, 4220774]
   },
-  {
-    "start_time": "11:50AM",
-    "end_time": "02:10pM",
-    "pattern": [20],
-    "spacing": [7, 8]
-  },
-  {
-    "start_time": "02:50PM",
-    "end_time": "06:50PM",
-    "pattern": [20],
-    "spacing": [7, 8]
-  },
-  {
-    "start_time": "07:50PM",
-    "end_time": "10:10PM",
-    "pattern": [20],
-    "spacing": [7, 8]
-  }
-]
+  "data": [
+    {
+      "start_time": "07:40AM",
+      "end_time": "11:00AM",
+      "pattern": [20],
+      "spacing": [7, 8]
+    },
+    {
+      "start_time": "11:50AM",
+      "end_time": "02:10pM",
+      "pattern": [20],
+      "spacing": [7, 8]
+    },
+    {
+      "start_time": "02:50PM",
+      "end_time": "06:50PM",
+      "pattern": [20],
+      "spacing": [7, 8]
+    },
+    {
+      "start_time": "07:50PM",
+      "end_time": "10:10PM",
+      "pattern": [20],
+      "spacing": [7, 8]
+    }
+  ]
+}

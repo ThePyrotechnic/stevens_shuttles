@@ -11,12 +11,20 @@ def main():
                      'blue_weekday.json']:
         with open(os.path.join(os.getcwd(), filename)) as cfg_file:
             cfg = json.load(cfg_file)
+        data = cfg['data']
+        info = cfg['info']
         print('-' * len(filename))
         print(filename)
+        if info.get('comment'):
+            print(info['comment'])
         print('-' * len(filename))
-        generated_filename = os.path.join(os.getcwd(), 'generated', f'{filename.split(".")[0]}.csv')
+        generated_filename = os.path.join(os.getcwd(), 'generated', f'{info["route_id"]}_{info["valid_duration"].csv')
         with open(generated_filename, 'w') as out_file:
-            for cur_cfg in cfg:
+            print(*info['headers'], sep=',', file=out_file)
+            for cur_cfg in data:
+                if cur_cfg.get('manual'):
+                    print(*cur_cfg['manual'], sep=',', file=out_file)
+                    continue
                 start_time = datetime.datetime.strptime(cur_cfg['start_time'], '%I:%M%p')
                 end_time = datetime.datetime.strptime(cur_cfg['end_time'], '%I:%M%p')
                 col_count = len(cur_cfg['spacing']) + 1
@@ -30,9 +38,9 @@ def main():
                         if not column_firsts[count]:
                             column_start_times[count] += datetime.timedelta(minutes=pattern.__next__())
                         column_firsts[count] = False
-                        print(column_start_times[count].time().strftime('%I:%M%p'), end=',', file=out_file)
+                        end = '' if count == col_count - 1 else ','
+                        print(column_start_times[count].time().strftime('%I:%M%p'), end=end, file=out_file)
                     print(file=out_file)
-                print(file=out_file)
 
 
 if __name__ == '__main__':

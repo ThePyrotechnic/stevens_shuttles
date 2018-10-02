@@ -1,8 +1,15 @@
-[
-  {
-    "start_time": "10:30PM",
-    "end_time": "02:15AM",
-    "pattern": [25],
-    "spacing": [9, 10, 10, 11, 18]
-  }
-]
+{
+  "info": {
+    "route_id": 4011460,
+    "valid_duration": ["10:30PM", "02:15AM"],
+    "headers": [4132090, 4208464, 4111538, 4211462, 4151398, 4211466]
+  },
+  "data": [
+    {
+      "start_time": "10:30PM",
+      "end_time": "02:15AM",
+      "pattern": [25],
+      "spacing": [9, 10, 10, 11, 18]
+    }
+  ]
+}
