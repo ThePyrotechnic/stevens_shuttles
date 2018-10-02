@@ -1,5 +1,6 @@
 from configparser import ConfigParser
 from multiprocessing import Pool
+from itertools import repeat
 from typing import Dict
 
 import psycopg2
@@ -18,9 +19,9 @@ def parse_config(file: str ='database.ini', db_type: str ='postgresql'):
     return data
 
 
-def process_shuttle(shuttle: ShuttleService.Shuttle):
+def process_shuttle(route_data: Dict, shuttle: ShuttleService.Shuttle):
     # TODO Check if shuttle is within scheduled route bounds
-    return f'Processed shuttle {shuttle.id}|{shuttle.timestamp}'
+    return f'Processed shuttle {shuttle.id}|{shuttle.timestamp}, {len(route_data)}'
 
 
 def get_latest_route_data():
@@ -44,7 +45,7 @@ def main():
     sm = ShuttleService.ShuttleManager(307)
     # TODO Send a copy of latest_route_data to workers along with the latest static schedule, and update periodically
     with Pool(5) as p:
-        res = p.map_async(process_shuttle, sm.shuttles)
+        res = p.starmap_async(process_shuttle, zip(repeat(latest_route_data), sm.shuttles))
         print(res.get())
     db.close()
     pass
