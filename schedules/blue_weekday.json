@@ -1,0 +1,32 @@
+[
+  {
+    "start_time": "07:37AM",
+    "end_time": "10:17AM",
+    "pattern": [20],
+    "spacing": [13, 15]
+  },
+  {
+    "start_time": "11:17AM",
+    "end_time": "01:07PM",
+    "pattern": [22],
+    "spacing": [15, 17]
+  },
+  {
+    "start_time": "01:51PM",
+    "end_time": "02:57PM",
+    "pattern": [22],
+    "spacing": [15, 17]
+  },
+  {
+    "start_time": "03:30PM",
+    "end_time": "07:10PM",
+    "pattern": [20],
+    "spacing": [7, 9]
+  },
+  {
+    "start_time": "08:20PM",
+    "end_time": "10:32PM",
+    "pattern": [22],
+    "spacing": [7, 9]
+  }
+]

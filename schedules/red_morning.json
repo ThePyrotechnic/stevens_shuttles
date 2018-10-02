@@ -1,0 +1,8 @@
+[
+  {
+    "start_time": "05:30AM",
+    "end_time": "06:45AM",
+    "pattern": [25],
+    "spacing": [6, 7, 7, 8, 17]
+  }
+]

@@ -1,11 +1,11 @@
 import datetime
 import json
-from itertools import cycle, repeat
+from itertools import cycle
 import os
 
 
 def main():
-    for filename in ['gray_weekday.json']:
+    for filename in ['green_weekday.json']:
         with open(os.path.join(os.getcwd(), filename)) as cfg_file:
             cfg = json.load(cfg_file)
         print('-' * len(filename))
@@ -19,7 +19,7 @@ def main():
             column_start_times.extend([start_time + datetime.timedelta(minutes=s) for s in cur_cfg['spacing']])
             column_patterns = [cycle(cur_cfg['pattern']) for _ in range(col_count)]
             column_firsts = [True for _ in range(col_count)]
-            while column_start_times[0] != end_time:
+            while column_start_times[0].time() != end_time.time():
                 for count in range(col_count):
                     pattern = column_patterns[count]
                     if not column_firsts[count]:
