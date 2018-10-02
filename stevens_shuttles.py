@@ -1,5 +1,6 @@
 from configparser import ConfigParser
 from multiprocessing import Pool
+from typing import Dict
 
 import psycopg2
 
@@ -43,8 +44,8 @@ def main():
     sm = ShuttleService.ShuttleManager(307)
     # TODO Send a copy of latest_route_data to workers along with the latest static schedule, and update periodically
     with Pool(5) as p:
-        print(p.map(process_shuttle, sm.shuttles))
-
+        res = p.map_async(process_shuttle, sm.shuttles)
+        print(res.get())
     db.close()
     pass
 
