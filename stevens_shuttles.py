@@ -41,8 +41,7 @@ def main():
 
     latest_route_data = get_latest_route_data()
     sm = ShuttleService.ShuttleManager(307)
-    # TODO Create in-memory shared schedule for process_shuttle to work with
-    # TODO Share latest_route_data with workers, and update periodically
+    # TODO Send a copy of latest_route_data to workers along with the latest static schedule, and update periodically
     with Pool(5) as p:
         print(p.map(process_shuttle, sm.shuttles))
 

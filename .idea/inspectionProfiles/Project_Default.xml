@@ -9,6 +9,7 @@
           <option value="lib.ShuttleService.Route.*" />
           <option value="lib.ShuttleService.Shuttle.*" />
           <option value="ShuttleService.Shuttle.*" />
+          <option value="ShuttleService.Stop.*" />
         </list>
       </option>
     </inspection_tool>
