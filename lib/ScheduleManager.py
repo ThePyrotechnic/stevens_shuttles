@@ -23,7 +23,8 @@ class Schedule:
     def __init__(self, route_id: int, schedule_columns: Dict[int, List[str]], valid_days: str, duration: Tuple[datetime.time, datetime.time]):
         self.route_id = route_id
         self.schedule_columns = schedule_columns
-        self.valid_days = valid_days
+        # TODO Come up with a better way of classifying schedule date validity
+        self.is_midweek = valid_days == 'weekdays'
         self.duration = duration
 
     def __str__(self):
@@ -99,6 +100,17 @@ class ScheduleManager:
 
         self._shuttle_data_lock.release()
         return valid
+
+    def get_nearest_time(self, route_id: int, time: datetime.time):
+        # TODO Remember that bus timestamps are in UTC but paper schedules are ET
+        # TODO Think about handling friday past midnight for the blue line and other late-night lines
+        self._paper_schedules_lock.acquire()
+        day = datetime.datetime.now().weekday()
+        is_midweek = day < 5
+        for schedule in self._last_paper_schedules[route_id]:
+            # TODO Get the currently valid schedule for the route
+            pass
+        self._paper_schedules_lock.release()
 
     def paper_schedules(self, update: bool = False) -> Dict[int, List[Schedule]]:
         """
