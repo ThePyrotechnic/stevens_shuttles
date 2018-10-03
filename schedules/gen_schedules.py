@@ -18,7 +18,8 @@ def main():
         if info.get('comment'):
             print(info['comment'])
         print('-' * len(filename))
-        generated_filename = os.path.join(os.getcwd(), 'generated', f'{info["route_id"]}_{info["valid_duration"].csv')
+        duration = f'{info["valid_duration"][0]}_{info["valid_duration"][1]}'.replace(':', '.')
+        generated_filename = os.path.join(os.getcwd(), 'generated', f'{info["route_id"]}_{duration}_{info["valid_days"]}.csv')
         with open(generated_filename, 'w') as out_file:
             print(*info['headers'], sep=',', file=out_file)
             for cur_cfg in data:

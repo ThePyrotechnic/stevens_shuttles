@@ -2,6 +2,7 @@
   "info": {
     "route_id": 4011460,
     "valid_duration": ["07:30AM", "10:00AM"],
+    "valid_days": "weekdays",
     "headers": [4132090, 4220776, 4151398, 4211466]
   },
   "data": [

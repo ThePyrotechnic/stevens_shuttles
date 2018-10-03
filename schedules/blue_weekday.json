@@ -2,6 +2,7 @@
   "info": {
     "route_id": 4004706,
     "valid_duration": ["07:37AM", "10:32PM"],
+    "valid_days": "weekdays",
     "headers": [4132090, 4208462, 4211460],
     "comment": "REMEMBER TO HANDLE MANUAL ENTRIES FOR THE BLUE LINE"
   },
