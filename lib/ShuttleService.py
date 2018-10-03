@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Dict, List
+from typing import Dict, List, Tuple
 
 import requests
 
@@ -24,6 +24,26 @@ class Stop(_GenericDictObj):
         super().__init__(data)
         self.position = tuple(self.position)
 
+    def at_stop(self, point: Tuple[float, float], box_size: int) -> bool:
+        """
+        Check if the point is within a square of width box_size centered at this stop's position
+        :param point: The point to check
+        :param box_size: The width and height of the box to check in meters
+        :return: True if the point is considered at the stop, False otherwise
+        """
+        # multiply by 0.00001 since 0.00001 is ~1 meter in geographic coordinates
+        width = box_size / 2 * 0.00001
+        if self.position[0] - width <= point[0] <= self.position[0] + width and \
+                self.position[1] - width <= point[1] <= self.position[1] + width:
+            return True
+        return False
+
+    def __str__(self):
+        return f'ID: {self.id}, Name: {self.name}'
+
+    def __repr__(self):
+        return self.__str__()
+
 
 class Route(_GenericDictObj):
     pass
@@ -34,6 +54,7 @@ class Shuttle(_GenericDictObj):
     A single shuttle
     :note: Use a ShuttleService to work with many shuttles in real-time
     """
+
     def __init__(self, data: Dict, detailed: bool = False):
         """
         Creates a shuttle object from a JSON response
@@ -53,7 +74,7 @@ class Shuttle(_GenericDictObj):
             self.stops = self._ss.get_stops(key_filter={'id': self.stop_ids})
 
         self.position = tuple(self.position)
-        self.timestamp = datetime.utcfromtimestamp(float(self.timestamp)/1000)
+        self.timestamp = datetime.utcfromtimestamp(float(self.timestamp) / 1000)
 
     def update(self, detailed: bool = False):
         """
@@ -71,6 +92,7 @@ class ShuttleManager:
     """
     Used to keep track of a TransLoc shuttle service in real-time
     """
+
     def __init__(self, agency_id: int):
         self._ss = ShuttleService(agency_id)
 
