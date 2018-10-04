@@ -18,8 +18,10 @@ def main():
         if info.get('comment'):
             print(info['comment'])
         print('-' * len(filename))
+        day_map = {0: 'Sun', 1: 'Mon', 2: 'Tues', 3: 'Wed', 4: 'Thurs', 5: 'Fri', 6: 'Sat'}
+        valid_days = '_'.join([day_map[day] for day in info['valid_days']])
         duration = f'{info["valid_duration"][0]}_{info["valid_duration"][1]}'.replace(':', '.')
-        generated_filename = os.path.join(os.getcwd(), 'generated', f'{info["route_id"]}_{duration}_{info["valid_days"]}.csv')
+        generated_filename = os.path.join(os.getcwd(), 'generated', f'{info["route_id"]}_{duration}_{valid_days}.csv')
         with open(generated_filename, 'w') as out_file:
             print(*info['headers'], sep=',', file=out_file)
             for cur_cfg in data:

@@ -6,6 +6,7 @@ name = "pypi"
 [packages]
 requests = "*"
 "psycopg2" = "*"
+pytz = "*"
 
 [dev-packages]
 

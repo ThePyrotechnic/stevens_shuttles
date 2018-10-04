@@ -3,9 +3,11 @@ import csv
 import datetime
 from itertools import cycle
 from collections import defaultdict
-from typing import Dict, Tuple, List
+from typing import Dict, Tuple, List, Set
 from multiprocessing import Lock
 from multiprocessing.managers import BaseManager
+
+import pytz
 
 import ShuttleService
 
@@ -20,25 +22,26 @@ class NoMoreTimes(Exception):
 
 class Schedule:
     """Represents a paper schedule"""
-    def __init__(self, route_id: int, schedule_columns: Dict[int, List[str]], valid_days: str, duration: Tuple[datetime.time, datetime.time]):
+    def __init__(self, route_id: int, schedule_columns: Dict[int, List[datetime.time]], valid_days: Set[str],
+                 duration: Tuple[datetime.datetime, datetime.datetime]):
         self.route_id = route_id
         self.schedule_columns = schedule_columns
-        # TODO Come up with a better way of classifying schedule date validity
-        self.is_midweek = valid_days == 'weekdays'
+        self.valid_days = valid_days
         self.duration = duration
 
     def __str__(self):
-        # Get any value from the dict of time lists and compute the length
+        # Get arbitrary value from the dict of time lists and compute the length
         loop_count = len(next(iter(self.schedule_columns.values())))
         return f'{self.route_id}: {len(self.schedule_columns)} columns, {loop_count} loops, valid {self.duration[0]}-{self.duration[1]} {self.valid_days}'
 
 
 class ScheduleManager:
-    def __init__(self, agency_id: int, schedules_path: str):
+    def __init__(self, agency_id: int, schedules_path: str, local_timezone: str):
         """
         Manages all routing and scheduling and determines the timeliness of a shuttle
         :param agency_id: The agency for which to compute scheduling
         :param schedules_path: The path where the CSVs of the schedules are stored
+        :param local_timezone: A string representing the local timezone
         """
         self._shuttle_data_lock = Lock()
         self._route_data_lock = Lock()
@@ -49,6 +52,7 @@ class ScheduleManager:
         self._last_route_data = self.stops_by_route(update=True)
         self._last_paper_schedules = self.paper_schedules(update=True)
         self._shuttle_data = {}
+        self._tz = pytz.timezone(local_timezone)
 
         routes = ShuttleService.ShuttleService(self._agency_id).get_routes()
         self._known_routes = {route.id: route.long_name for route in routes}
@@ -101,20 +105,33 @@ class ScheduleManager:
         self._shuttle_data_lock.release()
         return valid
 
-    def get_nearest_time(self, route_id: int, time: datetime.time):
-        # TODO Remember that bus timestamps are in UTC but paper schedules are ET
-        # TODO Think about handling friday past midnight for the blue line and other late-night lines
+    def get_nearest_time(self, route_id: int, time: datetime.datetime, stop_id: int) -> datetime.datetime:
+        """
+        Get the closest time to the given time from the schedule for the given route and stop
+        :param route_id: The route to get the stop schedules from
+        :param time: The time to compare to the schedules
+        :param stop_id: The stop to get the timetable for
+        :return: A datetime representing the time closest to the given time, satisfying the conditions above
+        """
         self._paper_schedules_lock.acquire()
-        day = datetime.datetime.now().weekday()
-        is_midweek = day < 5
-        for schedule in self._last_paper_schedules[route_id]:
-            # TODO Get the currently valid schedule for the route
-            pass
+        schedules = self._last_paper_schedules[route_id]
         self._paper_schedules_lock.release()
+
+        day = datetime.datetime.now().weekday()
+        possible_schedules = [s for s in schedules if day in s.valid_days]
+        for schedule in possible_schedules:
+            between = schedule.duration[0] <= time <= schedule.duration[1]
+            if between:
+                # TODO get nearest time from within desired stop timetable
+                break
+            else:
+                # TODO get the nearest time from the beginning/end of the timetable
+                pass
 
     def paper_schedules(self, update: bool = False) -> Dict[int, List[Schedule]]:
         """
         Load paper schedules from the schedule directory
+        :NOTE: Paper schedules MUST be regenerated at least every day or get_nearest_time WILL NOT WORK
         :param update: Whether to return the last computed data or reload the schedules from the disk
         :return: A dictionary mapping schedule route IDs to a list of schedules for that stop
         """
@@ -129,18 +146,31 @@ class ScheduleManager:
                     next_header = cycle(header)
                     for line in data:
                         for time in line:
+                            # Convert all schedule strings from the local timezone to UTC
+                            time = self.datetime_to_utc(datetime.datetime.strptime(f'{time}E', '%I:%M%p%Z')).time()
                             schedule_cols[next_header.__next__()].append(time)
 
                     schedule_name = str(os.path.splitext(os.path.split(schedule.name)[1])[0])
-                    route_id, start_time, end_time, valid_days = schedule_name.split('_')
-                    start_time = datetime.datetime.strptime(start_time, '%I.%M%p').time()
-                    end_time = datetime.datetime.strptime(end_time, '%I.%M%p').time()
+                    route_id, start_time, end_time, *valid_days = schedule_name.split('_')
 
-                    schedules[int(route_id)].append(Schedule(route_id, schedule_cols, valid_days, (start_time, end_time)))
+                    # Every schedule's time ranges should be assumed to be the current day
+                    # and the next day if the range extends past midnight
+                    # see ScheduleManger.get_nearest_time for how this is used
+                    now = datetime.date.today()
+                    start_time = datetime.datetime.combine(now, datetime.datetime.strptime(start_time, '%I.%M%p').time())
+                    end_time = datetime.datetime.combine(now, datetime.datetime.strptime(end_time, '%I.%M%p').time())
+
+                    if end_time < start_time:
+                        end_time += datetime.timedelta(days=1)
+
+                    schedules[int(route_id)].append(Schedule(route_id, schedule_cols, set(valid_days), (start_time, end_time)))
             self._last_paper_schedules = schedules
 
         self._paper_schedules_lock.release()
         return self._last_paper_schedules
+
+    def datetime_to_utc(self, dt: datetime.datetime):
+        return self._tz.localize(dt).astimezone(pytz.utc)
 
 
 class SharedScheduleManager(BaseManager):
