@@ -19,23 +19,31 @@ class UnknownRoute(Exception):
 class UnknownStop(Exception):
     pass
 
+class ScheduleException(Exception):
+    pass
+
 
 class Schedule:
     """Represents a paper schedule"""
-    def __init__(self, route_id: int, schedule_columns: Dict[int, List[datetime.time]], valid_days: Set[str],
+
+    def __init__(self, route_id: int, schedule_columns: Dict[int, List[datetime.datetime]], valid_days: Set[str],
                  duration: Tuple[datetime.datetime, datetime.datetime]):
         self.route_id = route_id
         self.schedule_columns = schedule_columns
-        self.valid_days = valid_days
+
+        day_map = {'Sun': 0, 'Mon': 1, 'Tues': 2, 'Wed': 3, 'Thurs': 4, 'Fri': 5, 'Sat': 6}
+        self.valid_days = [day_map[d] for d in valid_days]
         self.duration = duration
 
     def __str__(self):
-        # Get arbitrary value from the dict of time lists and compute the length
-        loop_count = len(next(iter(self.schedule_columns.values())))
+        # Get the longest timetable length
+        loop_count = max([len(t) for t in self.schedule_columns.values()])
         return f'{self.route_id}: {len(self.schedule_columns)} columns, {loop_count} loops, valid {self.duration[0]}-{self.duration[1]} {self.valid_days}'
 
 
 class ScheduleManager:
+    OLD_DATE = datetime.datetime(day=1, month=1, year=1980)
+
     def __init__(self, agency_id: int, schedules_path: str, local_timezone: str):
         """
         Manages all routing and scheduling and determines the timeliness of a shuttle
@@ -47,12 +55,13 @@ class ScheduleManager:
         self._route_data_lock = Lock()
         self._paper_schedules_lock = Lock()
 
+        self._tz = pytz.timezone(local_timezone)
+
         self._agency_id = agency_id
         self._schedules_path = schedules_path
         self._last_route_data = self.stops_by_route(update=True)
         self._last_paper_schedules = self.paper_schedules(update=True)
         self._shuttle_data = {}
-        self._tz = pytz.timezone(local_timezone)
 
         routes = ShuttleService.ShuttleService(self._agency_id).get_routes()
         self._known_routes = {route.id: route.long_name for route in routes}
@@ -109,14 +118,15 @@ class ScheduleManager:
         self._shuttle_data_lock.release()
         return valid
 
-    def get_nearest_time(self, route_id: int, time: datetime.datetime, stop_id: int) -> datetime.datetime:
+    def get_nearest_time(self, route_id: int, stop_id: int, reported_time: datetime.datetime) -> datetime.datetime:
         """
         Get the closest time to the given time from the schedule for the given route and stop
         :param route_id: The route to get the stop schedules from
-        :param time: The time to compare to the schedules
+        :param reported_time: The time to compare to the schedules
         :param stop_id: The stop to get the timetable for
         :return: A datetime representing the time closest to the given time, satisfying the conditions above
-        :raises UnknownRoute: if the route could not be found
+        :raises UnknownRoute: if the route ID could not be found
+        :raises UnknownStop: if no timetable for the stop ID could be found
         """
         self._paper_schedules_lock.acquire()
         try:
@@ -127,19 +137,31 @@ class ScheduleManager:
 
         day = datetime.datetime.now().weekday()
         possible_schedules = [s for s in schedules if day in s.valid_days]
+        if len(possible_schedules) == 0:
+            raise ScheduleException(f'No {datetime.datetime.now().strftime("%A")} schedules for route {route_id}')
+        last_end_time = None
         for schedule in possible_schedules:
-            between = schedule.duration[0] <= time <= schedule.duration[1]
-            if between:
+            if schedule.duration[0] <= reported_time <= schedule.duration[1]:
                 try:
+                    prev_time = None
                     timetable = schedule.schedule_columns[stop_id]
                     for stop_time in timetable:
-
+                        if stop_time > reported_time and prev_time is not None:
+                            return prev_time if reported_time - prev_time < stop_time - reported_time else stop_time
+                        elif stop_time == reported_time:
+                            return stop_time
+                        prev_time = stop_time
                 except KeyError:
                     raise UnknownStop(f'Stop {stop_id} not found in route {route_id}')
                 break
             else:
-                # TODO get the nearest time from the beginning/end of the timetable
-                pass
+                if reported_time < schedule.duration[0]:
+                    if last_end_time is not None:
+                        return last_end_time if reported_time - last_end_time < schedule.duration[0] - reported_time else schedule.duration[0]
+                    else:
+                        return schedule.duration[0]
+                else:
+                    last_end_time = schedule.duration[1]
 
     def paper_schedules(self, update: bool = False) -> Dict[int, List[Schedule]]:
         """
@@ -161,8 +183,14 @@ class ScheduleManager:
                     schedule_cols = {col: [] for col in header}
                     next_header = cycle(header)
                     for line in data:
-                        last = self.datetime_to_utc(datetime.datetime.combine(today, datetime.datetime.strptime(line[0], '%I:%M%p').time()))
+                        # If a time is None it will be ignored
+                        first = [t for t in line if t != 'None'][0]
+                        last = self.datetime_to_utc(datetime.datetime.combine(today, datetime.datetime.strptime(first, '%I:%M%p').time()))
                         for time in line:
+                            if time == 'None':
+                                # If a time is marked as None, go to the next header but add nothing to the current timetable
+                                next_header.__next__()
+                                continue
                             # Convert all schedule strings from the local timezone to UTC
                             time = self.datetime_to_utc(datetime.datetime.combine(today, datetime.datetime.strptime(time, '%I:%M%p').time()))
                             # If a time has crossed midnight
@@ -180,8 +208,8 @@ class ScheduleManager:
                     # and the next day if the range extends past midnight
                     # see ScheduleManger.get_nearest_time for how this is used
                     today = datetime.date.today()
-                    start_time = datetime.datetime.combine(today, datetime.datetime.strptime(start_time, '%I.%M%p').time())
-                    end_time = datetime.datetime.combine(today, datetime.datetime.strptime(end_time, '%I.%M%p').time())
+                    start_time = self.datetime_to_utc(datetime.datetime.combine(today, datetime.datetime.strptime(start_time, '%I.%M%p').time()))
+                    end_time = self.datetime_to_utc(datetime.datetime.combine(today, datetime.datetime.strptime(end_time, '%I.%M%p').time()))
 
                     if end_time < start_time:
                         end_time += datetime.timedelta(days=1)
@@ -202,3 +230,10 @@ class SharedScheduleManager(BaseManager):
 
 
 SharedScheduleManager.register('ScheduleManager', ScheduleManager)
+
+
+if __name__ == '__main__':
+    t = datetime.datetime.combine(datetime.date.today(), datetime.time(hour=17, minute=0, second=0, tzinfo=datetime.timezone(datetime.timedelta(seconds=0))))
+    sched = ScheduleManager(307, os.path.join('C:\\', 'Users', 'micha', 'Documents', 'PycharmProjects', 'stevens_shuttles', 'schedules', 'generated'), 'America/New_York')
+    res = sched.get_nearest_time(4004706, 4132090, t)
+    pass
