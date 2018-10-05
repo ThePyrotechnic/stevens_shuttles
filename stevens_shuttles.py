@@ -23,16 +23,15 @@ def parse_config(file: str ='database.ini', db_type: str ='postgresql'):
 
 def process_shuttle(scheduler: ScheduleManager.ScheduleManager, shuttle: ShuttleService.Shuttle):
     # db: psycopg2 = psycopg2.connect(**parse_config())
-    # TODO check whether shuttle has passed a stop and record it in the DB
     print(scheduler.get_route_name(shuttle.route_id))
     stops_by_route = scheduler.stops_by_route()
     try:
         stops = stops_by_route[shuttle.route_id]
         for stop in stops:
-            if stop.at_stop(shuttle.position, 30):
-                if scheduler.validate_stop(shuttle.id, stop.id):
-                    # TODO add confirmed stop to DB
-                    print(f'\tShuttle ID {shuttle.id} stopped at {stop.name} at {shuttle.timestamp}')
+            if stop.at_stop(shuttle.position, 30) and scheduler.validate_stop(shuttle.id, stop.id):
+                nearest_time = scheduler.get_nearest_time(shuttle.route_id, stop.id, shuttle.timestamp)
+                # TODO add confirmed stop to DB
+                print(f'\tShuttle ID {shuttle.id} stopped at {stop.name} at {shuttle.timestamp}. Nearest time in table: {nearest_time}')
     except KeyError:
         print('unknown route')
         # TODO add unknown route to DB
