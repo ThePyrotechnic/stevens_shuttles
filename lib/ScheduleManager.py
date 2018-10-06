@@ -19,6 +19,7 @@ class UnknownRoute(Exception):
 class UnknownStop(Exception):
     pass
 
+
 class ScheduleException(Exception):
     pass
 
@@ -31,7 +32,7 @@ class Schedule:
         self.route_id = route_id
         self.schedule_columns = schedule_columns
 
-        day_map = {'Sun': 0, 'Mon': 1, 'Tues': 2, 'Wed': 3, 'Thurs': 4, 'Fri': 5, 'Sat': 6}
+        day_map = {'Sun': 7, 'Mon': 0, 'Tues': 1, 'Wed': 2, 'Thurs': 3, 'Fri': 4, 'Sat': 5}
         self.valid_days = [day_map[d] for d in valid_days]
         self.duration = duration
 
@@ -136,7 +137,7 @@ class ScheduleManager:
         self._paper_schedules_lock.release()
 
         day = datetime.datetime.now().weekday()
-        possible_schedules = [s for s in schedules if day in s.valid_days]
+        possible_schedules = sorted([s for s in schedules if day in s.valid_days], key=lambda s: s.duration[0])
         if len(possible_schedules) == 0:
             raise ScheduleException(f'No {datetime.datetime.now().strftime("%A")} schedules for route {route_id}')
         last_end_time = None

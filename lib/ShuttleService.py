@@ -206,7 +206,7 @@ class ShuttleService:
         :return: A list of route IDs
         """
         try:
-            return self.get_stop_ids_for_routes(key_filter={'id': route_id}, **kwargs)[0]['stops']
+            return self.get_stop_ids_for_routes(key_filter={'id': route_id}, **kwargs)[route_id]
         except IndexError:
             raise ObjectNotFound(f'Route ID "{route_id}" not found')
 

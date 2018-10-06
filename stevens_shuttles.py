@@ -41,8 +41,6 @@ def process_shuttle(scheduler: ScheduleManager.ScheduleManager, shuttle: Shuttle
 
 def main():
     sm = ShuttleService.ShuttleManager(307)
-    debug_scheduler = ScheduleManager.ScheduleManager(307, os.path.join(os.getcwd(), 'schedules', 'generated'), 'America/New_York')
-    # print(debug_scheduler._known_routes)
     with ScheduleManager.SharedScheduleManager() as manager:
         scheduler: ScheduleManager.ScheduleManager = manager.ScheduleManager(307, os.path.join(os.getcwd(), 'schedules', 'generated'),
                                                                              'America/New_York')
