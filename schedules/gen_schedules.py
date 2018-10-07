@@ -2,9 +2,11 @@ import datetime
 import json
 from itertools import cycle
 import os
+import time
 
 
 def main():
+    meta_info = {'date_generated': int(time.time()), 'file_info': []}
     for filename in ['red_weekday.json', 'red_morning.json', 'red_sunday.json', 'red_saturday.json',
                      'green_weekday.json',
                      'gray_weekday.json', 'gray_night.json',
@@ -18,11 +20,14 @@ def main():
         if info.get('comment'):
             print(info['comment'])
         print('-' * len(filename))
-        day_map = {0: 'Sun', 1: 'Mon', 2: 'Tues', 3: 'Wed', 4: 'Thurs', 5: 'Fri', 6: 'Sat'}
-        valid_days = '_'.join([day_map[day] for day in info['valid_days']])
-        duration = f'{info["valid_duration"][0]}_{info["valid_duration"][1]}'.replace(':', '.')
-        generated_filename = os.path.join(os.getcwd(), 'generated', f'{info["route_id"]}_{duration}_{valid_days}.csv')
-        with open(generated_filename, 'w') as out_file:
+
+        meta_info['file_info'].append({
+            'filename': f'{info["filename"]}.csv',
+            'valid_days': info['valid_days'],
+            'comment': info.get('comment')
+        })
+
+        with open(os.path.join(os.getcwd(), 'generated', f'{info["filename"]}.csv'), 'w') as out_file:
             print(*info['headers'], sep=',', file=out_file)
             for cur_cfg in data:
                 if cur_cfg.get('manual'):
@@ -44,6 +49,9 @@ def main():
                         end = '' if count == col_count - 1 else ','
                         print(column_start_times[count].time().strftime('%I:%M%p'), end=end, file=out_file)
                     print(file=out_file)
+
+    with open(os.path.join(os.getcwd(), 'generated', 'file_info.json'), 'w') as meta_file:
+        json.dump(meta_info, fp=meta_file, separators=(',', ':'))
 
 
 if __name__ == '__main__':

@@ -1,8 +1,8 @@
 {
   "info": {
     "route_id": 4011456,
-    "valid_duration": ["07:30AM", "12:12PM"],
-    "valid_days": [1, 2, 3, 4, 5],
+    "filename": "red_weekday",
+    "valid_days": [0, 1, 2, 3, 4],
     "headers": [4132090, 4208464, 4111538, 4211462]
   },
   "data": [

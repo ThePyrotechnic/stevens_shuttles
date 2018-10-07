@@ -32,7 +32,9 @@ class Schedule:
         self.route_id = route_id
         self.schedule_columns = schedule_columns
 
-        day_map = {'Sun': 7, 'Mon': 0, 'Tues': 1, 'Wed': 2, 'Thurs': 3, 'Fri': 4, 'Sat': 5}
+        # Sunday starts at 0 according to datetime.strf/ptime but dateteime.day.weekday() has Sunday at 7,
+        # so the days here are translated according to the weekday() standard, since that is what these numbers will be compared to.
+        day_map = {'Sun': 6, 'Mon': 0, 'Tues': 1, 'Wed': 2, 'Thurs': 3, 'Fri': 4, 'Sat': 5}
         self.valid_days = [day_map[d] for d in valid_days]
         self.duration = duration
 
@@ -135,7 +137,6 @@ class ScheduleManager:
         except KeyError:
             raise UnknownRoute(f'No schedule associated with route {route_id}')
         self._paper_schedules_lock.release()
-
         day = datetime.datetime.now().weekday()
         possible_schedules = sorted([s for s in schedules if day in s.valid_days], key=lambda s: s.duration[0])
         if len(possible_schedules) == 0:

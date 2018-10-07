@@ -2,7 +2,6 @@ from multiprocessing import Process
 import os
 from configparser import ConfigParser
 from typing import List, Tuple, Dict
-from numbers import Real
 import time
 import random
 import datetime
@@ -28,7 +27,7 @@ class MockShuttle:
         pass
 
     @property
-    def position(self) -> Tuple[Real, Real]:
+    def position(self) -> Tuple[float, float]:
         if random.random() < 0.10:
             return self._ss.get_stop(self._stops.__next__()).position
         else:
@@ -50,7 +49,7 @@ class MockShuttleManager(ShuttleService.ShuttleManager):
         return random_shuttles
 
 
-def mock_process_shuttle(scheduler: ScheduleManager.ScheduleManager, shuttle: ShuttleService.Shuttle):
+def mock_process_shuttle(scheduler: ScheduleManager.ScheduleManager, shuttle: MockShuttle):
     # db: psycopg2 = psycopg2.connect(**parse_config())
     print(scheduler.get_route_name(shuttle.route_id))
     stops_by_route = scheduler.stops_by_route()
@@ -58,9 +57,13 @@ def mock_process_shuttle(scheduler: ScheduleManager.ScheduleManager, shuttle: Sh
         stops = stops_by_route[shuttle.route_id]
         for stop in stops:
             if stop.at_stop(shuttle.position, 30) and scheduler.validate_stop(shuttle.id, stop.id):
-                nearest_time = scheduler.get_nearest_time(shuttle.route_id, stop.id, shuttle.timestamp)
+                try:
+                    nearest_time = scheduler.get_nearest_time(shuttle.route_id, stop.id, shuttle.timestamp)
+                except ScheduleManager.ScheduleException as e:
+                    print(f'\t{e}')
+                    return
                 # TODO add confirmed stop to DB
-                print(f'\tShuttle ID {shuttle.id} stopped at {stop.name} at {shuttle.timestamp}. Nearest time in table: {nearest_time}')
+                print(f'\tShuttle ID {shuttle.id} stopped at {stop.id} at {shuttle.timestamp}. Nearest time in table: {nearest_time}')
     except KeyError:
         print('unknown route')
         # TODO add unknown route to DB
@@ -72,16 +75,24 @@ def mock_process_shuttle(scheduler: ScheduleManager.ScheduleManager, shuttle: Sh
 def main():
     sm = MockShuttleManager(307)
 
-    with ScheduleManager.SharedScheduleManager() as manager:
-        scheduler: ScheduleManager.ScheduleManager = manager.ScheduleManager(307, os.path.join(os.getcwd(), '..', 'schedules', 'generated'),
-                                                                             'America/New_York')
-        workers: List[Process] = []
-        while True:
-            for shuttle in sm.shuttles:
-                p = Process(target=mock_process_shuttle, args=(scheduler, shuttle))
-                p.start()
-                workers.append(p)
-            time.sleep(2 - (time.time() % 2))
+    # with ScheduleManager.SharedScheduleManager() as manager:
+    #     scheduler: ScheduleManager.ScheduleManager = manager.ScheduleManager(307, os.path.join(os.getcwd(), '..', 'schedules', 'generated'),
+    #                                                                          'America/New_York')
+    scheduler: ScheduleManager.ScheduleManager = ScheduleManager.ScheduleManager(307, os.path.join(os.getcwd(), '..', 'schedules', 'generated'),
+                                                                                 'America/New_York')
+
+    while True:
+        for shuttle in sm.shuttles:
+            mock_process_shuttle(scheduler, shuttle)
+        time.sleep(1 - (time.time() % 1))
+
+        # workers: List[Process] = []
+        # while True:
+        #     for shuttle in sm.shuttles:
+        #         p = Process(target=mock_process_shuttle, args=(scheduler, shuttle))
+        #         p.start()
+        #         workers.append(p)
+        #     time.sleep(2 - (time.time() % 2))
 
 
 if __name__ == '__main__':
