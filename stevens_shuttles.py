@@ -46,7 +46,7 @@ def main():
                                                                              'America/New_York')
         workers: List[Process] = []
         while True:
-            for shuttle in sm.shuttles:
+            for shuttle in sm.shuttles():
                 p = Process(target=process_shuttle, args=(scheduler, shuttle))
                 p.start()
                 workers.append(p)

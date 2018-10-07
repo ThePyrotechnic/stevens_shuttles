@@ -96,7 +96,6 @@ class ShuttleManager:
     def __init__(self, agency_id: int):
         self._ss = ShuttleService(agency_id)
 
-    @property
     def shuttles(self, detailed: bool = False, key_filter: Dict = None) -> List[Shuttle]:
         """
         Get the currently active shuttles for the current service.

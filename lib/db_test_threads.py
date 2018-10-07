@@ -1,4 +1,4 @@
-from threading import Thread
+from multiprocessing import Process
 import os
 from configparser import ConfigParser
 from typing import List, Tuple, Dict
