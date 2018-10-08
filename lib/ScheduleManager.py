@@ -74,7 +74,7 @@ class ScheduleManager:
         Get the route name for a given route ID, if possible
         :param route_id: The route ID to look for
         :return: The route name
-        :raise UnknownRoute: if the route could nto be identified
+        :raise UnknownRoute: if the route could not be identified
         """
         try:
             return self._known_routes[route_id]
