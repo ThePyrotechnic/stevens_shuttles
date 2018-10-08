@@ -230,7 +230,6 @@ class ShuttleService:
         Filter the results list of dicts by the key-value pairs in the key_filter dict
         :param results: The list of dicts to filter
         :param key_filter: The dict to filter with
-        :param kwargs: additional kwargs are passed to the web request
         :return: A list where each item is a dict whose key-value pairs are at least equal to the key-value pairs
         in the key_filter dict. If a value in key_filter is a list, at least one of the values must match.
         """
