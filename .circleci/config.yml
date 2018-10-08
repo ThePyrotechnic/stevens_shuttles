@@ -35,7 +35,7 @@ jobs:
           name: install dependencies
           command: |
             python3 -m pip install pipenv
-            pipenv update
+            pipenv install
 
       - save_cache:
           paths:
