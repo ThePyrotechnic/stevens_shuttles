@@ -1,3 +1,4 @@
 .idea/
 schedules/generated/*
 __pycache__/
+test-reports/
