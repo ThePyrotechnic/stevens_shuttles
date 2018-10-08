@@ -50,7 +50,6 @@ jobs:
       - run:
           name: run tests
           command: |
-            pipenv shell
             mkdir test-reports
             pytest --junitxml=test-reports/junit.xml
 
