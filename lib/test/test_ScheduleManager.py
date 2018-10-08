@@ -21,7 +21,7 @@ class TestScheduleManager:
             TestScheduleManager.sm.get_route_name(1)
 
     def test_stops_by_route(self):
-        assert type(TestScheduleManager.sm.stops_by_route()) == dict
+        assert isinstance(TestScheduleManager.sm.stops_by_route(), dict)
 
     def test_validate_stop(self):
         assert TestScheduleManager.sm.validate_stop(1, 1)
