@@ -17,10 +17,6 @@ jobs:
           - v1-dependencies-
 
       - run:
-          name: set pythonpath
-          command: export PYTHONPATH=$PYTHONPATH:~/stevens_shuttles/lib
-
-      - run:
           name: install dependencies
           command: |
             python3 -m pip install pipenv
