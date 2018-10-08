@@ -2,8 +2,6 @@ import datetime
 import random
 import os
 
-print(os.getenv('PYTHONPATH'))
-
 from WeekTime import WeekTime
 
 
