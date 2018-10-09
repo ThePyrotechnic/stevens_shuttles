@@ -35,7 +35,6 @@ def process_shuttle(scheduler: ScheduleManager.ScheduleManager, shuttle: Shuttle
     except KeyError:
         print('unknown route')
         # TODO add unknown route to DB
-        pass
     # db.close()
 
 

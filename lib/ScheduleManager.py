@@ -139,7 +139,7 @@ class ScheduleManager:
         self._paper_schedules_lock.release()
         day = datetime.datetime.now().weekday()
         possible_schedules = sorted([s for s in schedules if day in s.valid_days], key=lambda s: s.duration[0])
-        if len(possible_schedules) == 0:
+        if not possible_schedules:
             raise ScheduleException(f'No {datetime.datetime.now().strftime("%A")} schedules for route {route_id}')
         last_end_time = None
         for schedule in possible_schedules:
@@ -160,8 +160,7 @@ class ScheduleManager:
                 if reported_time < schedule.duration[0]:
                     if last_end_time is not None:
                         return last_end_time if reported_time - last_end_time < schedule.duration[0] - reported_time else schedule.duration[0]
-                    else:
-                        return schedule.duration[0]
+                    return schedule.duration[0]
                 else:
                     last_end_time = schedule.duration[1]
 

@@ -233,12 +233,12 @@ class ShuttleService:
         :return: A list where each item is a dict whose key-value pairs are at least equal to the key-value pairs
         in the key_filter dict. If a value in key_filter is a list, at least one of the values must match.
         """
-        if key_filter is None or len(key_filter) == 0:
+        if key_filter is None or not key_filter:
             return results
 
         filtered_results = []
         for result in results:
-            if all(result.get(key) == value or (type(value) == list and result.get(key) in value) for key, value in key_filter.items()):
+            if all(result.get(key) == value or (isinstance(value, list) and result.get(key) in value) for key, value in key_filter.items()):
                 filtered_results.append(result)
         return filtered_results
 

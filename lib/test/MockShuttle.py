@@ -16,14 +16,12 @@ class MockShuttle:
 
         self._stops = cycle(MockShuttle.STOPS_BY_ROUTE_ID[self.route_id])
         self._ss = ShuttleService.ShuttleService(307)
-        pass
 
     @property
     def position(self) -> Tuple[float, float]:
         if random.random() < 0.10:
             return self._ss.get_stop(self._stops.__next__()).position
-        else:
-            return 40.737898, -74.037995
+        return 40.737898, -74.037995
 
     def __str__(self):
         return f'ID: {self.id}, Route ID: {self.route_id}'
