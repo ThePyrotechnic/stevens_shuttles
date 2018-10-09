@@ -237,4 +237,3 @@ if __name__ == '__main__':
     t = datetime.datetime.combine(datetime.date.today(), datetime.time(hour=17, minute=0, second=0, tzinfo=datetime.timezone(datetime.timedelta(seconds=0))))
     sched = ScheduleManager(307, os.path.join('C:\\', 'Users', 'micha', 'Documents', 'PycharmProjects', 'stevens_shuttles', 'schedules', 'generated'), 'America/New_York')
     res = sched.get_nearest_time(4004706, 4132090, t)
-    pass
