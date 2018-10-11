@@ -1,15 +1,17 @@
 import os
 import csv
 import datetime
+import json
 from itertools import cycle
 from collections import defaultdict
-from typing import Dict, Tuple, List, Set
+from typing import Dict, Tuple, List, Set, TextIO
 from multiprocessing import Lock
 from multiprocessing.managers import BaseManager
 
 import pytz
 
 import ShuttleService
+from WeekTime import WeekTime
 
 
 class UnknownRoute(Exception):
@@ -27,21 +29,15 @@ class ScheduleException(Exception):
 class Schedule:
     """Represents a paper schedule"""
 
-    def __init__(self, route_id: int, schedule_columns: Dict[int, List[datetime.datetime]], valid_days: Set[str],
-                 duration: Tuple[datetime.datetime, datetime.datetime]):
+    def __init__(self, route_id: int, schedule_columns: Dict[int, List[WeekTime]], name: str = None):
         self.route_id = route_id
         self.schedule_columns = schedule_columns
-
-        # Sunday starts at 0 according to datetime.strf/ptime but dateteime.day.weekday() has Sunday at 7,
-        # so the days here are translated according to the weekday() standard, since that is what these numbers will be compared to.
-        day_map = {'Sun': 6, 'Mon': 0, 'Tues': 1, 'Wed': 2, 'Thurs': 3, 'Fri': 4, 'Sat': 5}
-        self.valid_days = [day_map[d] for d in valid_days]
-        self.duration = duration
+        self.name = None
 
     def __str__(self):
         # Get the longest timetable length
         loop_count = max([len(t) for t in self.schedule_columns.values()])
-        return f'{self.route_id}: {len(self.schedule_columns)} columns, {loop_count} loops, valid {self.duration[0]}-{self.duration[1]} {self.valid_days}'
+        return f'{self.name or ""}{self.route_id}: {len(self.schedule_columns)} columns, {loop_count} loops'
 
 
 class ScheduleManager:
@@ -167,62 +163,38 @@ class ScheduleManager:
     def paper_schedules(self, update: bool = False) -> Dict[int, List[Schedule]]:
         """
         Load paper schedules from the schedule directory
-        :NOTE: Paper schedules MUST be regenerated at least every day or get_nearest_time WILL NOT WORK
         :param update: Whether to return the last computed data or reload the schedules from the disk
-        :return: A dictionary mapping schedule route IDs to a list of schedules for that stop
-        #TODO Someone who has the patience to deal with dates and timezones should review this
+        :return: A dictionary mapping schedule route IDs to a list of schedules for that stop111
         """
         self._paper_schedules_lock.acquire()
         if update:
             schedules = defaultdict(list)
-            today = datetime.date.today()
-            tomorrow = today + datetime.timedelta(days=1)
-            for schedule_file in os.listdir(self._schedules_path):
-                with open(os.path.join(self._schedules_path, schedule_file)) as schedule:
-                    data = csv.reader(schedule)
-                    header = [int(col) for col in data.__next__()]
-                    schedule_cols = {col: [] for col in header}
-                    next_header = cycle(header)
-                    for line in data:
-                        # If a time is None it will be ignored
-                        first = [t for t in line if t != 'None'][0]
-                        last = self.datetime_to_utc(datetime.datetime.combine(today, datetime.datetime.strptime(first, '%I:%M%p').time()))
-                        for time in line:
-                            if time == 'None':
-                                # If a time is marked as None, go to the next header but add nothing to the current timetable
-                                next_header.__next__()
-                                continue
-                            # Convert all schedule strings from the local timezone to UTC
-                            time = self.datetime_to_utc(datetime.datetime.combine(today, datetime.datetime.strptime(time, '%I:%M%p').time()))
-                            # If a time has crossed midnight
-                            if time < last:
-                                time = datetime.datetime.combine(tomorrow, time.time())
-                                today = tomorrow
-                                tomorrow += datetime.timedelta(days=1)
-                            last = time
-                            schedule_cols[next_header.__next__()].append(time)
-
-                    schedule_name = str(os.path.splitext(os.path.split(schedule.name)[1])[0])
-                    route_id, start_time, end_time, *valid_days = schedule_name.split('_')
-
-                    # Every schedule's time ranges should be assumed to be the current day
-                    # and the next day if the range extends past midnight
-                    # see ScheduleManger.get_nearest_time for how this is used
-                    today = datetime.date.today()
-                    start_time = self.datetime_to_utc(datetime.datetime.combine(today, datetime.datetime.strptime(start_time, '%I.%M%p').time()))
-                    end_time = self.datetime_to_utc(datetime.datetime.combine(today, datetime.datetime.strptime(end_time, '%I.%M%p').time()))
-
-                    if end_time < start_time:
-                        end_time += datetime.timedelta(days=1)
-
-                    schedules[int(route_id)].append(Schedule(route_id, schedule_cols, set(valid_days), (start_time, end_time)))
+            with open(os.path.join(self._schedules_path, 'file_info.json'), 'r') as info_file:
+                file_info = json.load(info_file)['file_info']
+                for schedule_filename in os.listdir(self._schedules_path):
+                    with open(os.path.join(self._schedules_path, schedule_filename)) as schedule:
+                        schedule = ScheduleManager._convert_schedule_file(file_info[schedule_filename], schedule)
+                        schedules[schedule.route_id].append(schedule)
             self._last_paper_schedules = schedules
 
         self._paper_schedules_lock.release()
         return self._last_paper_schedules
 
-    def datetime_to_utc(self, dt: datetime.datetime) -> datetime.datetime:
-        return self._tz.localize(dt).astimezone(pytz.utc)
+    @classmethod
+    def _convert_schedule_file(cls, file_info: Dict, schedule_file: TextIO) -> Schedule:
+        data = csv.reader(schedule_file)
+        header = [int(col) for col in data.__next__()]
+        schedule_cols = {col: [] for col in header}
+        next_header = cycle(header)
+        for line in data:
+            for str_time in line:
+                if str_time.lower() == 'none':
+                    next_header.__next__()
+                    continue
+                obj_time = datetime.datetime.strptime(str_time, '%I:%M%p').time()
+                for day in file_info['valid_days']:
+                    schedule_cols[next_header.__next__()].append(WeekTime.time_to_weektime(obj_time, day))
+        return Schedule(file_info['route_id'], schedule_cols)
 
 
 class SharedScheduleManager(BaseManager):

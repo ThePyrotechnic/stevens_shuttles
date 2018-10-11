@@ -24,6 +24,8 @@ class WeekTime:
         """The second in the minute that this WeekTime occurs on"""
         return self._second
 
+
+
     @classmethod
     def from_timestamp(cls, timestamp: Real):
         """
@@ -43,6 +45,41 @@ class WeekTime:
         :return: A WeekTime occurring on the given weekday at the same time as the given datetime.time
         """
         return cls(weekday * 24 + time.hour, time.minute, time.second)
+
+    def __gt__(self, other):
+        if isinstance(other, WeekTime):
+            eq = self.__eq__(other)
+            if eq is NotImplemented:
+                return eq
+            if not eq:
+                return not self.__lt__(other)
+            return False
+        return NotImplemented
+
+    def __lt__(self, other):
+        if isinstance(other, WeekTime):
+            if self._hour < other._hour:
+                return True
+            elif self._hour == other._hour and self._minute < other._minute:
+                return True
+            elif self._hour == other._hour and self._minute == other._minute and \
+                    self._second < other._second:
+                return True
+            return False
+        return NotImplemented
+
+    def __eq__(self, other):
+        if isinstance(other, WeekTime):
+            return self._hour == other._hour and \
+                    self._minute == other.minute and \
+                    self._second == other._second
+        return NotImplemented
+
+    def __ne__(self, other):
+        res = self.__eq__(other)
+        if res is NotImplemented:
+            return res
+        return not res
 
     def __repr__(self):
         return f'<WeekTime: h:{self.hour} m:{self.minute} s:{self.second}>'

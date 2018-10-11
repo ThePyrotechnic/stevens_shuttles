@@ -6,7 +6,8 @@ import time
 
 
 def main():
-    meta_info = {'date_generated': int(time.time()), 'file_info': []}
+    # TODO Put soe kind of hash for diff check in metafile
+    meta_info = {'date_generated': int(time.time()), 'file_info': {}}
     for filename in ['red_weekday.json', 'red_morning.json', 'red_sunday.json', 'red_saturday.json',
                      'green_weekday.json',
                      'gray_weekday.json', 'gray_night.json',
@@ -21,11 +22,11 @@ def main():
             print(info['comment'])
         print('-' * len(filename))
 
-        meta_info['file_info'].append({
-            'filename': f'{info["filename"]}.csv',
+        meta_info['file_info'][f'{info["filename"]}.csv'] = {
+            'route_id': info['route_id'],
             'valid_days': info['valid_days'],
             'comment': info.get('comment')
-        })
+        }
 
         with open(os.path.join(os.getcwd(), 'generated', f'{info["filename"]}.csv'), 'w') as out_file:
             print(*info['headers'], sep=',', file=out_file)

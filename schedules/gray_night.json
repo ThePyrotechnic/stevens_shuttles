@@ -2,7 +2,7 @@
   "info": {
     "route_id": 4011460,
     "filename": "gray_night",
-    "valid_days": [0, 1, 2, 3, 4, 5],
+    "valid_days": [0, 1, 2, 3, 4],
     "headers": [4132090, 4208464, 4111538, 4211462, 4151398, 4211466]
   },
   "data": [
