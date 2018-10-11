@@ -44,10 +44,10 @@ class TestWeekTime:
         assert t2 > t1
         t1 = WeekTime(0, 0, 1)
         t2 = WeekTime(0, 1, 0)
-        assert t2 < t1
+        assert t2 > t1
         t1 = WeekTime(0, 1, 1)
         t2 = WeekTime(1, 0, 0)
-        assert t2 < t1
+        assert t2 > t1
 
     def test_eq(self):
         t1 = WeekTime(0, 0, 1)
