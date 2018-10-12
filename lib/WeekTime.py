@@ -5,6 +5,10 @@ from numbers import Real
 class WeekTime:
     def __init__(self, hour: int = 0, minute: int = 0, second: int = 0):
         """Represents a moment of time within a seven-day week, starting at 00:00:00 on Monday"""
+        if hour > 167 or minute > 59 or second > 59:
+            raise ValueError(f'Weektime must not exceed 167 hours, 59 minutes, 59 seconds')
+        if hour < 0 or minute < 0 or second < 0:
+            raise ValueError(f'Weektime must be positive')
         self._hour = hour
         self._minute = minute
         self._second = second
@@ -23,8 +27,6 @@ class WeekTime:
     def second(self):
         """The second in the minute that this WeekTime occurs on"""
         return self._second
-
-
 
     @classmethod
     def from_timestamp(cls, timestamp: Real):
@@ -45,6 +47,29 @@ class WeekTime:
         :return: A WeekTime occurring on the given weekday at the same time as the given datetime.time
         """
         return cls(weekday * 24 + time.hour, time.minute, time.second)
+
+    def __sub__(self, other):
+        if isinstance(other, WeekTime):
+            hour = self._hour - other._hour
+            minute = self._minute - other._minute
+            second = self._second - other._second
+
+            if second < 0:
+                minute -= 1
+                second = 59 + second
+            if minute < 0:
+                hour -= 1
+                minute = 59 + minute
+            if hour < 0:
+                raise ValueError('Subtraction would produce negative WeekTime')
+            return WeekTime(hour, minute, second)
+        return NotImplemented
+
+    def __ge__(self, other):
+        return self.__gt__(other) or self.__eq__(other)
+
+    def __le__(self, other):
+        return self.__lt__(other) or self.__eq__(other)
 
     def __gt__(self, other):
         if isinstance(other, WeekTime):

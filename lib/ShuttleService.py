@@ -3,6 +3,8 @@ from typing import Dict, List, Tuple
 
 import requests
 
+from WeekTime import WeekTime
+
 
 class BadResponse(Exception):
     """The response code was unexpected"""
@@ -74,7 +76,7 @@ class Shuttle(_GenericDictObj):
             self.stops = self._ss.get_stops(key_filter={'id': self.stop_ids})
 
         self.position = tuple(self.position)
-        self.timestamp = datetime.fromtimestamp(float(self.timestamp) / 1000, tz=timezone(timedelta(seconds=0)))
+        self.timestamp = WeekTime.from_timestamp(float(self.timestamp) / 1000)
 
     def update(self, detailed: bool = False):
         """
