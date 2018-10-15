@@ -7,7 +7,7 @@ from collections import defaultdict
 from typing import Dict, List, TextIO
 from multiprocessing import Lock
 from multiprocessing.managers import BaseManager
-from datetime import datetime
+from datetime import date, datetime, timedelta
 
 import pytz
 
@@ -175,33 +175,50 @@ class ScheduleManager:
         """
         self._paper_schedules_lock.acquire()
         if update:
+            nearby_dates = ScheduleManager._get_nearby_dates()
             schedules = defaultdict(list)
             with open(os.path.join(self._schedules_path, 'file_info.json'), 'r') as info_file:
                 file_info = json.load(info_file)['file_info']
                 for schedule_filename in [f for f in os.listdir(self._schedules_path) if os.path.splitext(f)[-1] == '.csv']:
-                    with open(os.path.join(self._schedules_path, schedule_filename)) as schedule_file:
-                        schedule = self._convert_schedule_file(file_info[schedule_filename], schedule_file, os.path.splitext(schedule_filename)[0])
-                        schedules[schedule.route_id].append(schedule)
+                    # Check if the schedule is valid for any of the nearby days
+                    days_to_generate = [nearby_dates[day] for day in file_info[schedule_filename]['valid_days'] if day in nearby_dates.keys()]
+                    if days_to_generate:
+                        with open(os.path.join(self._schedules_path, schedule_filename)) as schedule_file:
+                            schedule = self._convert_schedule_file(file_info=file_info[schedule_filename],
+                                                                   schedule_file=schedule_file,
+                                                                   schedule_name=os.path.splitext(schedule_filename)[0],
+                                                                   dates_to_generate=days_to_generate)
+                            schedules[schedule.route_id].append(schedule)
             self._last_paper_schedules = schedules
 
         self._paper_schedules_lock.release()
         return self._last_paper_schedules
 
-    def _convert_schedule_file(self, file_info: Dict, schedule_file: TextIO, schedule_name) -> Schedule:
+    @classmethod
+    def _get_nearby_dates(cls) -> Dict[int: date]:
+        now = datetime.now(tz=pytz.utc)
+        weekday = now.weekday()
+
+        day_list = [0, 1, 2, 3, 4, 5, 6]
+        return {
+            day_list[(weekday - 1) % 7]: (now - timedelta(days=1)).date(),
+            weekday: now.date(),
+            day_list[(weekday + 1) % 7]: (now + timedelta(days=1)).date()
+        }
+
+    def _convert_schedule_file(self, file_info: Dict, schedule_file: TextIO, schedule_name, dates_to_generate: List[date]) -> Schedule:
         """
         Convert a schedule file into a Schedule object
         :param file_info: The information about the file
         :param schedule_file: The opened file handle of the schedule
         :param schedule_name: The name of the schedule
+        :param dates_to_generate: The dates to create this schedue for
         :return: A Schedule object representing the paper schedule
         """
         data = csv.reader(schedule_file)
         stops = [int(col) for col in data.__next__()]
         schedule_cols = {col: [] for col in stops}
         next_stop_id = cycle(stops)
-        utcoffset_str = datetime.datetime.now(self._tz).strftime('%z')
-        utcoffset = datetime.timedelta(hours=int(utcoffset_str[1:3]), minutes=int(utcoffset_str[3:5]))
-        negative = utcoffset_str[0] == '-'
 
         found_start = False
         start_time = None
@@ -211,8 +228,9 @@ class ScheduleManager:
                     next_stop_id.__next__()
                     continue
                 obj_time = datetime.datetime.strptime(str_time, '%I:%M%p').time()
-                for day in file_info['valid_days']:
-                    week_time = WeekTime.time_to_weektime(obj_time, day)
+                for day in dates_to_generate:
+                    # TODO Convert paper schedule time to UTC datetime
+                    stop_time = datetime.combine(day, )
                     if not found_start:
                         start_time = week_time
                     schedule_cols[next_stop_id.__next__()].append(week_time)

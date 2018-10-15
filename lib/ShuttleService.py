@@ -2,8 +2,7 @@ from datetime import datetime, timezone, timedelta
 from typing import Dict, List, Tuple
 
 import requests
-
-from WeekTime import WeekTime
+import pytz
 
 
 class BadResponse(Exception):
@@ -76,7 +75,7 @@ class Shuttle(_GenericDictObj):
             self.stops = self._ss.get_stops(key_filter={'id': self.stop_ids})
 
         self.position = tuple(self.position)
-        self.timestamp = WeekTime.from_timestamp(float(self.timestamp) / 1000)
+        self.timestamp = datetime.fromtimestamp(float(self.timestamp) / 1000, tz=pytz.utc)
 
     def update(self, detailed: bool = False):
         """
