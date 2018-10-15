@@ -6,7 +6,7 @@ import ShuttleService
 import ScheduleManager
 
 
-# pytest.skip('Undergoing rewrite', allow_module_level=True)
+pytest.skip('Need to integrate gen_schedules.py', allow_module_level=True)
 
 
 class TestScheduleManager:
