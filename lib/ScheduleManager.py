@@ -7,11 +7,11 @@ from collections import defaultdict
 from typing import Dict, List, TextIO
 from multiprocessing import Lock
 from multiprocessing.managers import BaseManager
+from datetime import datetime
 
 import pytz
 
 import ShuttleService
-from WeekTime import WeekTime
 
 
 class UnknownRoute(Exception):
@@ -26,7 +26,7 @@ class UnknownStop(Exception):
 
 class Schedule:
 
-    def __init__(self, route_id: int, timetable: Dict[int, List[WeekTime]], valid_days: List[int], start_time: WeekTime, name: str = None):
+    def __init__(self, route_id: int, timetable: Dict[int, List[datetime]], valid_days: List[int], start_time: datetime, name: str = None):
         """
         A paper schedule
         :param route_id: The route ID that this schedule is valid for
@@ -48,7 +48,7 @@ class Schedule:
 
 
 class ScheduleManager:
-    OLD_DATE = datetime.datetime(day=1, month=1, year=1980)
+    OLD_DATE = datetime(day=1, month=1, year=1980)
 
     def __init__(self, agency_id: int, schedules_path: str, local_timezone: str):
         """
@@ -130,7 +130,7 @@ class ScheduleManager:
         self._shuttle_data_lock.release()
         return valid
 
-    def get_nearest_time(self, route_id: int, stop_id: int, reported_time: WeekTime) -> WeekTime:
+    def get_nearest_time(self, route_id: int, stop_id: int, reported_time: datetime) -> datetime:
         """
         Get the closest time to the given time from the schedule for the given route and stop
         :param route_id: The route to get the stop schedules from
@@ -147,8 +147,6 @@ class ScheduleManager:
             raise UnknownRoute(f'No schedule associated with route {route_id}')
         self._paper_schedules_lock.release()
         # Order schedules by start time so that they are searched sequentially
-        today = datetime.date.today().weekday()
-        schedules = [s for s in schedules if today in s.valid_days]
         schedules = sorted(schedules, key=lambda s: s.start_time)
         for schedule in schedules:
             try:
@@ -182,15 +180,14 @@ class ScheduleManager:
                 file_info = json.load(info_file)['file_info']
                 for schedule_filename in [f for f in os.listdir(self._schedules_path) if os.path.splitext(f)[-1] == '.csv']:
                     with open(os.path.join(self._schedules_path, schedule_filename)) as schedule_file:
-                        schedule = ScheduleManager._convert_schedule_file(file_info[schedule_filename], schedule_file, os.path.splitext(schedule_filename)[0])
+                        schedule = self._convert_schedule_file(file_info[schedule_filename], schedule_file, os.path.splitext(schedule_filename)[0])
                         schedules[schedule.route_id].append(schedule)
             self._last_paper_schedules = schedules
 
         self._paper_schedules_lock.release()
         return self._last_paper_schedules
 
-    @classmethod
-    def _convert_schedule_file(cls, file_info: Dict, schedule_file: TextIO, schedule_name) -> Schedule:
+    def _convert_schedule_file(self, file_info: Dict, schedule_file: TextIO, schedule_name) -> Schedule:
         """
         Convert a schedule file into a Schedule object
         :param file_info: The information about the file
@@ -202,6 +199,9 @@ class ScheduleManager:
         stops = [int(col) for col in data.__next__()]
         schedule_cols = {col: [] for col in stops}
         next_stop_id = cycle(stops)
+        utcoffset_str = datetime.datetime.now(self._tz).strftime('%z')
+        utcoffset = datetime.timedelta(hours=int(utcoffset_str[1:3]), minutes=int(utcoffset_str[3:5]))
+        negative = utcoffset_str[0] == '-'
 
         found_start = False
         start_time = None
