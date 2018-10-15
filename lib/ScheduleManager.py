@@ -119,6 +119,7 @@ class ScheduleManager:
         :return: True if the shuttle was not at this stop twice in a row (or more), False otherwise
         """
         # TODO Save this dictionary to DB on close so that the state can be loaded when the program starts
+        # TODO Custom logic for Howe Center stop
         self._shuttle_data_lock.acquire()
 
         valid = False
