@@ -1,7 +1,6 @@
 from multiprocessing import Process
 import os
 from configparser import ConfigParser
-from typing import List
 import time
 
 import psycopg2
@@ -34,7 +33,7 @@ def process_shuttle(scheduler: ScheduleManager.ScheduleManager, shuttle: Shuttle
         if stop.at_stop(shuttle.position, 30) and scheduler.validate_stop(shuttle.id, stop.id):
             nearest_time = scheduler.get_nearest_time(shuttle.route_id, stop.id, shuttle.timestamp)
             # TODO add confirmed stop to DB
-            print(f'\tShuttle ID {shuttle.id} stopped at {stop.name} at {shuttle.timestamp}. Nearest time in table: {nearest_time}')
+            print(f'\tShuttle ID {shuttle.id} stopped at {stop} ({stop.name}) at {shuttle.timestamp}. Nearest time in table: {nearest_time}')
     # db.close()
 
 
@@ -45,7 +44,7 @@ def main():
     while True:
         for shuttle in sm.shuttles():
             process_shuttle(debug_scheduler, shuttle)
-            time.sleep(2 - (time.time() % 2))
+        time.sleep(2 - (time.time() % 2))
 
     # with ScheduleManager.SharedScheduleManager() as manager:
     #     scheduler: ScheduleManager.ScheduleManager = manager.ScheduleManager(307, os.path.join(os.getcwd(), 'schedules', 'generated'),

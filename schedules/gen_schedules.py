@@ -22,11 +22,7 @@ def main():
             print(info['comment'])
         print('-' * len(filename))
 
-        meta_info['file_info'][f'{info["filename"]}.csv'] = {
-            'route_id': info['route_id'],
-            'valid_days': info['valid_days'],
-            'comment': info.get('comment')
-        }
+        meta_info['file_info'][f'{info["filename"]}.csv'] = info
 
         with open(os.path.join(os.getcwd(), 'generated', f'{info["filename"]}.csv'), 'w') as out_file:
             print(*info['headers'], sep=',', file=out_file)

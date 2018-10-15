@@ -3,8 +3,8 @@
     "route_id": 4004706,
     "filename": "blue_weekday",
     "valid_days": [0, 1, 2, 3, 4],
-    "headers": [4132090, 4208462, 4211460],
-    "comment": "REMEMBER TO HANDLE MANUAL ENTRIES FOR THE BLUE LINE"
+    "overlap_days": [],
+    "headers": [4132090, 4208462, 4211460]
   },
   "data": [
     {

@@ -7,11 +7,17 @@ from collections import defaultdict
 from typing import Dict, List, TextIO
 from multiprocessing import Lock
 from multiprocessing.managers import BaseManager
+from datetime import date, datetime, timedelta
 
 import pytz
 
 import ShuttleService
-from WeekTime import WeekTime
+
+
+def _get_weekday(num: int) -> int:
+    """Get the weekday for an integer, assuming 0 is Monday"""
+    day_list = [0, 1, 2, 3, 4, 5, 6]
+    return day_list[num % 7]
 
 
 class UnknownRoute(Exception):
@@ -26,19 +32,17 @@ class UnknownStop(Exception):
 
 class Schedule:
 
-    def __init__(self, route_id: int, timetable: Dict[int, List[WeekTime]], valid_days: List[int], start_time: WeekTime, name: str = None):
+    def __init__(self, route_id: int, timetable: Dict[int, List[datetime]], start_time: datetime, name: str = None):
         """
         A paper schedule
         :param route_id: The route ID that this schedule is valid for
         :param timetable: The timetable listing the times for each stop ID
-        :param valid_days: The days for which this schedule is valid
         :param start_time: The earliest time in the schedule's timetable
         :param name: The name of the schedule
         """
         self.route_id = route_id
         self.start_time = start_time
         self.timetable = timetable
-        self.valid_days = valid_days
         self.name = name
 
     def __str__(self):
@@ -48,7 +52,7 @@ class Schedule:
 
 
 class ScheduleManager:
-    OLD_DATE = datetime.datetime(day=1, month=1, year=1980)
+    OLD_DATE = datetime(day=1, month=1, year=1980, tzinfo=pytz.utc)
 
     def __init__(self, agency_id: int, schedules_path: str, local_timezone: str):
         """
@@ -130,7 +134,7 @@ class ScheduleManager:
         self._shuttle_data_lock.release()
         return valid
 
-    def get_nearest_time(self, route_id: int, stop_id: int, reported_time: WeekTime) -> WeekTime:
+    def get_nearest_time(self, route_id: int, stop_id: int, reported_time: datetime) -> datetime:
         """
         Get the closest time to the given time from the schedule for the given route and stop
         :param route_id: The route to get the stop schedules from
@@ -147,55 +151,76 @@ class ScheduleManager:
             raise UnknownRoute(f'No schedule associated with route {route_id}')
         self._paper_schedules_lock.release()
         # Order schedules by start time so that they are searched sequentially
-        today = datetime.date.today().weekday()
-        schedules = [s for s in schedules if today in s.valid_days]
         schedules = sorted(schedules, key=lambda s: s.start_time)
+
+        last_end_time = ScheduleManager.OLD_DATE
         for schedule in schedules:
             try:
                 stop_times = schedule.timetable[stop_id]
             except KeyError:
                 continue
-            if reported_time < stop_times[0]:
-                return stop_times[0]
+            if last_end_time < reported_time < stop_times[0]:
+                return stop_times[0] if stop_times[0] - reported_time < reported_time - last_end_time else last_end_time
             if reported_time > stop_times[-1]:
+                last_end_time = stop_times[-1]
                 continue
             # At this point the stop time must be within the current list of stop times
             prev_time = stop_times[0]
             for cur_time in stop_times[1:]:
                 if reported_time <= cur_time:
-                    if reported_time == cur_time:
-                        return cur_time
                     # Return the closer time
                     return cur_time if cur_time - reported_time < reported_time - prev_time else prev_time
-        raise UnknownStop(f'Stop ID {stop_id} not found in any schedule for route {route_id}')
+                prev_time = cur_time
+        if not schedules:
+            raise UnknownStop(f'Stop ID {stop_id} not found in any schedule for route {route_id}')
+        # At this point all schedules have been iterated which means the reported time is late to last stop
+        return last_end_time
 
     def paper_schedules(self, update: bool = False) -> Dict[int, List[Schedule]]:
         """
         Load paper schedules from the schedule directory
         :param update: Whether to return the last computed data or reload the schedules from the disk
-        :return: A dictionary mapping schedule route IDs to a list of schedules for that stop
+        :return: A dictionary mapping schedule route IDs to a list of schedules for that route
         """
+
         self._paper_schedules_lock.acquire()
         if update:
+            now = datetime.now(tz=self._tz)
+            weekday = now.weekday()
+            relevant_dates = {
+                _get_weekday(weekday - 1): (now - timedelta(days=1)).date(),
+                weekday: now.date(),
+            }
+
             schedules = defaultdict(list)
             with open(os.path.join(self._schedules_path, 'file_info.json'), 'r') as info_file:
-                file_info = json.load(info_file)['file_info']
+                all_file_info = json.load(info_file)['file_info']
                 for schedule_filename in [f for f in os.listdir(self._schedules_path) if os.path.splitext(f)[-1] == '.csv']:
-                    with open(os.path.join(self._schedules_path, schedule_filename)) as schedule_file:
-                        schedule = ScheduleManager._convert_schedule_file(file_info[schedule_filename], schedule_file, os.path.splitext(schedule_filename)[0])
-                        schedules[schedule.route_id].append(schedule)
+                    file_info = all_file_info[schedule_filename]
+                    # Check if the schedule is valid for any of the relevant days
+                    start_dates = [relevant_dates[day] for day in file_info['valid_days'] if day == weekday]
+                    # Generate a schedule as if it started yesterday if it overlaps with today
+                    overlap_dates = [relevant_dates[_get_weekday(day - 1)] for day in file_info['overlap_days'] if day == weekday]
+                    dates_to_generate = set(start_dates + overlap_dates)
+                    for cur_date in dates_to_generate:
+                        with open(os.path.join(self._schedules_path, schedule_filename)) as schedule_file:
+                            schedule = self._convert_schedule_file(file_info=file_info,
+                                                                   schedule_file=schedule_file,
+                                                                   schedule_name=os.path.splitext(schedule_filename)[0],
+                                                                   start_date=cur_date)
+                            schedules[schedule.route_id].append(schedule)
             self._last_paper_schedules = schedules
 
         self._paper_schedules_lock.release()
         return self._last_paper_schedules
 
-    @classmethod
-    def _convert_schedule_file(cls, file_info: Dict, schedule_file: TextIO, schedule_name) -> Schedule:
+    def _convert_schedule_file(self, file_info: Dict, schedule_file: TextIO, schedule_name: str, start_date: date) -> Schedule:
         """
         Convert a schedule file into a Schedule object
         :param file_info: The information about the file
         :param schedule_file: The opened file handle of the schedule
         :param schedule_name: The name of the schedule
+        :param start_date: The absolute date to use when creating this schedule's stop times
         :return: A Schedule object representing the paper schedule
         """
         data = csv.reader(schedule_file)
@@ -203,22 +228,29 @@ class ScheduleManager:
         schedule_cols = {col: [] for col in stops}
         next_stop_id = cycle(stops)
 
-        found_start = False
-        start_time = None
+        last_time = None
+        first_time = None
         for line in data:
             for str_time in line:
                 if str_time.lower() == 'none':
                     next_stop_id.__next__()
                     continue
-                obj_time = datetime.datetime.strptime(str_time, '%I:%M%p').time()
-                for day in file_info['valid_days']:
-                    week_time = WeekTime.time_to_weektime(obj_time, day)
-                    if not found_start:
-                        start_time = week_time
-                    schedule_cols[next_stop_id.__next__()].append(week_time)
-        for stop_id, timetable in schedule_cols.items():
-            schedule_cols[stop_id] = sorted(schedule_cols[stop_id])
-        return Schedule(file_info['route_id'], schedule_cols, file_info['valid_days'], start_time, name=schedule_name)
+                raw_time = datetime.strptime(str_time, '%I:%M%p').time()
+                # If the current time is in the AM but the last time is in the PM
+                # then midnight was crossed
+                if last_time is not None and raw_time.hour < 12 <= last_time.hour:
+                    start_date += timedelta(days=1)
+                last_time = raw_time
+                stop_time = self._convert_to_utc(datetime.combine(start_date, raw_time))
+                if first_time is None:
+                    first_time = stop_time
+                schedule_cols[next_stop_id.__next__()].append(stop_time)
+
+        return Schedule(file_info['route_id'], schedule_cols, first_time, name=schedule_name)
+
+    def _convert_to_utc(self, time: datetime) -> datetime:
+        """Convert a datetime to UTC"""
+        return self._tz.localize(time).astimezone(pytz.utc)
 
 
 class SharedScheduleManager(BaseManager):
