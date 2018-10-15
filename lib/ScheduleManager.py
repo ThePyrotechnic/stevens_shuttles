@@ -118,6 +118,7 @@ class ScheduleManager:
         :param stop_id: The stop ID to check for a double-stop
         :return: True if the shuttle was not at this stop twice in a row (or more), False otherwise
         """
+        # TODO Save this dictionary to DB on close so that the state can be loaded when the program starts
         self._shuttle_data_lock.acquire()
 
         valid = False

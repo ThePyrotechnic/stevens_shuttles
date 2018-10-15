@@ -33,7 +33,7 @@ def process_shuttle(scheduler: ScheduleManager.ScheduleManager, shuttle: Shuttle
         if stop.at_stop(shuttle.position, 30) and scheduler.validate_stop(shuttle.id, stop.id):
             nearest_time = scheduler.get_nearest_time(shuttle.route_id, stop.id, shuttle.timestamp)
             # TODO add confirmed stop to DB
-            print(f'\tShuttle ID {shuttle.id} stopped at {stop} ({stop.name}) at {shuttle.timestamp}. Nearest time in table: {nearest_time}')
+            print(f'\tShuttle ID {shuttle.id} stopped at ({stop.name}) at {shuttle.timestamp}. Nearest time in table: {nearest_time}')
     # db.close()
 
 
