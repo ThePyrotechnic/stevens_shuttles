@@ -6,7 +6,7 @@ import ShuttleService
 import ScheduleManager
 
 
-pytest.skip('Undergoing rewrite', allow_module_level=True)
+# pytest.skip('Undergoing rewrite', allow_module_level=True)
 
 
 class TestScheduleManager:
@@ -29,6 +29,7 @@ class TestScheduleManager:
         assert TestScheduleManager.sm.validate_stop(2, 1)
         assert TestScheduleManager.sm.validate_stop(2, 2)
 
+    @pytest.mark.skip(reason='Undergoing rewrite')
     def test_paper_schedules(self):
         assert True
 
