@@ -8,6 +8,8 @@ requests = "*"
 "psycopg2" = "*"
 pytz = "*"
 pytest = "*"
+"beautifulsoup4" = "*"
+"html5lib" = "*"
 
 [dev-packages]
 
