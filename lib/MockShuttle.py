@@ -2,7 +2,7 @@ import ShuttleService
 import random
 import datetime
 from itertools import cycle
-from typing import List, Tuple
+from typing import List, Tuple, Dict
 
 
 class MockShuttle:
@@ -16,20 +16,24 @@ class MockShuttle:
 
         self._stops = cycle(MockShuttle.STOPS_BY_ROUTE_ID[self.route_id])
         self._ss = ShuttleService.ShuttleService(307)
+        pass
 
     @property
     def position(self) -> Tuple[float, float]:
         if random.random() < 0.10:
             return self._ss.get_stop(self._stops.__next__()).position
-        return 40.737898, -74.037995
+        else:
+            return 40.737898, -74.037995
 
     def __str__(self):
         return f'ID: {self.id}, Route ID: {self.route_id}'
 
 
-class MockShuttleManager:
-    @classmethod
-    def shuttles(cls) -> List[MockShuttle]:
+class MockShuttleManager(ShuttleService.ShuttleManager):
+    def __init__(self, agency_id: int):
+        super().__init__(agency_id)
+
+    def shuttles(self, detailed: bool = False, key_filter: Dict = None) -> List[MockShuttle]:
         random_shuttles = []
         for _ in range(random.randrange(3, 6)):
             random_shuttles.append(MockShuttle())
